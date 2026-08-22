@@ -14,12 +14,11 @@ or a broker every actor talks to. See
 Capability Method) is how a *domain-specific* platform gets designed — e.g. a "banking platform"
 serving one business's product line, worked example `papeete-foundry/banking-tech`, built
 top-down: domain → strategic platform capabilities → tactical tech ADRs → PCM YAML. That kind of
-platform is scoped to the business it serves. `papeete-platform` sits one level down, underneath
-any of them: it doesn't know or care what domain an actor belongs to, only that actors need to be
-reachable and to talk to each other. A domain-specific platform MAY consume this repo's modules as
-generic building blocks for its own infra (an ingress controller is an ingress controller
-regardless of the domain on top), but that's a decision made in that platform's own tech-tact
-ADRs, never assumed here.
+platform is scoped to the business it serves. `papeete-platform` is orthogonal to it, not
+underneath it: it doesn't know or care what domain an actor belongs to, only that actors need to
+be reachable and to talk to each other. **There is no link between the two** — no dependency,
+consumption, or composition in either direction. A domain-specific platform's own tech-tact ADRs
+choose and provision its infra entirely on their own terms.
 
 ```
 modules/
@@ -62,9 +61,9 @@ ahead of a concrete need (ADR-PL-0001's Consequences).
 - **This repo provisions; `papeete-deploy` consumes.** `papeete-deploy` still assumes an
   environment's shared infra (an ingress class, a broker) already exists — it never calls into this
   repo, and this repo never reads a `product.yaml`.
-- **This repo is domain-agnostic; a "banking platform" (or any other) is domain-specific.** Nothing
-  here is designed via the PCM methodology or carries a `zoning` — a domain-specific platform is
-  free to build on top of a module here, but this repo has no dependency in the other direction.
+- **This repo is orthogonal to any domain-specific platform** (a "banking platform" or any other,
+  PCM-designed). Nothing here is designed via the PCM methodology or carries a `zoning`, and there
+  is no dependency between the two in either direction — they simply don't relate.
 
 ## Releasing
 

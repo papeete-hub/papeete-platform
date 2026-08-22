@@ -36,8 +36,9 @@ with this one: `foundation/platform/adr/` is the **PCM** (Platform Capability Me
 methodology for designing a *domain-specific* platform (e.g. a banking platform serving one
 business's product line, worked example `papeete-foundry/banking-tech`), top-down from a domain
 brainstorm through strategic/tactical ADRs to PCM YAML. That's a design method for a
-business-scoped platform; it is not this repo. `papeete-platform` is domain-agnostic and sits one
-level down — the shared plumbing any actor needs regardless of which business it serves.
+business-scoped platform; it is not this repo. `papeete-platform` is domain-agnostic — the shared
+plumbing any actor needs regardless of which business it serves — and **orthogonal** to any
+PCM-designed platform: no dependency, consumption, or composition in either direction.
 
 ## Decision
 
@@ -84,10 +85,10 @@ cloud queue). Naming this repo's structure after Kubernetes primitives (à la `p
 - **`ADR-PA-0025`'s `deploy/terraform/` is untouched.** It remains for infra one specific actor
   owns. A module here never takes an actor or product name as input — if a variable would only ever
   be set to one actor's identity, that module belongs in the actor's own folder instead, not here.
-- **The PCM (`foundation/platform/adr/`) is untouched, and this repo has no dependency on it.** A
-  domain-specific platform designed via PCM (a banking platform, etc.) may choose to consume a
-  module here as a generic building block for its own tactical infra; nothing here reads a PCM
-  artefact or assumes such a platform exists.
+- **The PCM (`foundation/platform/adr/`) is untouched and orthogonal to this repo.** A
+  domain-specific platform designed via PCM (a banking platform, etc.) has no link to this repo in
+  either direction — nothing here reads a PCM artefact, and nothing in a PCM-designed platform is
+  expected to consume a module from here.
 - **No PyPI-style release.** Modules are consumed by git ref (`?ref=vX.Y.Z`), Terraform's own
   registry-free convention — this repo tags releases (`git tag vX.Y.Z`) but publishes nothing to a
   package index.
