@@ -1,0 +1,20 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  fmt-validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: [modules/ingress-nginx, examples/ingress-nginx-local]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: fmt check
+        run: terraform fmt -check -recursive
+      - name: init (no backend, no real cluster needed)
+        working-directory: ${{ matrix.dir }}
+        run: terraform init -backend=false
+      - name: validate
+        working-directory: ${{ matrix.dir }}
+        run: terraform validate
