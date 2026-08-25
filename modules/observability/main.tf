@@ -165,6 +165,7 @@ locals {
           name: sidecar
           disableDelete: false
           allowUiUpdates: false
+          foldersFromFilesStructure: true
   YAML
 
   elasticsearch_default_values = <<-YAML
