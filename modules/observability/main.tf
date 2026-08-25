@@ -154,6 +154,17 @@ locals {
                 spanStartTimeShift: "-1h"
                 spanEndTimeShift: "1h"
                 filterByTraceID: true
+    sidecar:
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+        labelValue: "1"
+        searchNamespace: ALL
+        folderAnnotation: grafana_folder
+        provider:
+          name: sidecar
+          disableDelete: false
+          allowUiUpdates: false
   YAML
 
   elasticsearch_default_values = <<-YAML
