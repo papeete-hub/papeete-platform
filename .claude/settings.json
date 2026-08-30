@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/foundation/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/foundation/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/kcapture/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/kcapture/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/kmint/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/kmint/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/knowledge-samples/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/knowledge-samples/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/kpack/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/kpack/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-actor-message/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-actor-message/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-actor-synchronous-messaging-github-issues/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-actor-synchronous-messaging-github-issues/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-actor-synchronous-messaging-http/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-actor-synchronous-messaging-http/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-actor-synchronous-messaging/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-actor-synchronous-messaging/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-actor/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-actor/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-deploy/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-deploy/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-observability/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-observability/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-product/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-product/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-version/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/papeete-version/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/plugins/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/plugins/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/projectors/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/projectors/*)",
+      "Edit(//home/yoann/organisations/papeete-consulting/papeete-hub/schema-org-fr/*)",
+      "Write(//home/yoann/organisations/papeete-consulting/papeete-hub/schema-org-fr/*)"
+    ]
+  }
+}
