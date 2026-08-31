@@ -16,7 +16,7 @@ README for the full boundary rationale. In short:
   shared infra already exists — it never calls into this repo.
 - **Orthogonal to any PCM-designed domain-specific platform** (e.g. a banking platform). No
   dependency in either direction; nothing here reads a PCM artefact.
-- Not Kubernetes-exclusive by design, even though every module today targets `kubernetes`/`helm`.
+- Not Kubernetes-exclusive by design, and no longer in theory only: `modules/acr` targets `azurerm`.
 
 ## Commands
 
@@ -52,7 +52,12 @@ and instantiates the module directly (`source = "../../modules/<name>"`). No wra
 stack combining modules. A module never configures its own provider — the caller always supplies
 it, which is what keeps a module reusable across environments.
 
-Within a module, every `helm_release` follows the same per-resource variable shape:
+Not every module is a Helm install. `modules/acr` and `modules/buildkit` are built from
+`azurerm_*` / `kubernetes_*` provider resources — neither has a chart worth installing
+([ADR-PL-0002](./adr/ADR-PL-0002-image-building-is-shared-platform-infrastructure.md)) — so the
+variable shape below applies to the Helm modules and does not generalise to them.
+
+Within a Helm module, every `helm_release` follows the same per-resource variable shape:
 `chart_version` (nullable, unpinned = latest), `set_values` (map, `--set`-style, via a `dynamic
 "set"` block) and `values_yaml` (a full values document as a string). A module with several
 components (e.g. `modules/observability`) gates each `helm_release` behind its own

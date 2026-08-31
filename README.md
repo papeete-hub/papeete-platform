@@ -23,13 +23,16 @@ choose and provision its infra entirely on their own terms.
 ```
 modules/
   ingress-nginx/     installs an ingress controller into an existing k8s cluster
+  observability/     OTel Collector, Tempo, Loki, Prometheus, Grafana — one telemetry pipeline
+  buildkit/          rootless in-cluster image building, no Docker socket anywhere
+  acr/               an Azure Container Registry with scope-mapped push and pull tokens
 examples/
-  ingress-nginx-local/   the worked example, against Docker Desktop's Kubernetes
+  <name>-local/      the worked example for each, against Docker Desktop's Kubernetes
 ```
 
 Each module under `modules/` is a complete, independently deployable root module — no wrapper, no
-umbrella stack. Not Kubernetes-exclusive: a future module can target any provider its component
-needs (a cloud DNS zone, a managed queue), not only `kubernetes`/`helm`.
+umbrella stack. Not Kubernetes-exclusive: `acr` targets `azurerm`, because a registry is not a
+cluster resource. A module targets whatever provider its component needs.
 
 ## Use a module
 
@@ -49,9 +52,22 @@ terraform apply
 
 ## What's here today
 
-Only [`modules/ingress-nginx`](./modules/ingress-nginx/) — an ingress controller, the one shared
-piece of infra multiple actors in a cluster consistently need. Nothing else ships speculatively
-ahead of a concrete need (ADR-PL-0001's Consequences).
+Four modules, each added against a concrete need rather than speculatively (ADR-PL-0001's
+Consequences):
+
+- [`modules/ingress-nginx`](./modules/ingress-nginx/) — an ingress controller, the one shared piece
+  of infra multiple actors in a cluster consistently need.
+- [`modules/observability`](./modules/observability/) — one telemetry pipeline every actor exports
+  to: OTel Collector on 4317 fanning out to Tempo, Loki and Prometheus, with Grafana pre-wired and
+  auto-discovering the dashboards products ship in their own namespaces.
+- [`modules/buildkit`](./modules/buildkit/) — rootless BuildKit as an ordinary Deployment, so an
+  actor that needs to build an image no longer needs the node's Docker socket
+  ([ADR-PL-0002](./adr/ADR-PL-0002-image-building-is-shared-platform-infrastructure.md)).
+- [`modules/acr`](./modules/acr/) — where what it builds goes, with a push token for the builder
+  and a read-only token for everything that runs the result.
+
+The last two are built from `kubernetes_*` / `azurerm_*` resources rather than a `helm_release` —
+neither has a chart worth installing. Each module's README says which it is.
 
 ## Boundary
 

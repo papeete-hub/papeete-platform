@@ -7,10 +7,12 @@ and product deployed into that environment — nothing here names one of them
 ([ADR-PL-0001](../../adr/ADR-PL-0001-papeete-platform-is-a-standalone-terraform-repo.md)); the
 paths a token may reach are the caller's input.
 
-This is the first module here to target a **cloud provider rather than a cluster**, and the first
-built from provider resources (`azurerm_*`) rather than a `helm_release` — a registry has no chart
-to install. ADR-PL-0001 anticipated exactly this: *"a module targets whatever provider its
-component needs"*.
+This is the first module here to target a **cloud provider rather than a cluster**, and — with
+[`modules/buildkit`](../buildkit/) — the first built from provider resources (`azurerm_*`) rather
+than a `helm_release`: a registry has no chart to install. ADR-PL-0001 anticipated exactly this,
+*"a module targets whatever provider its component needs"*, and
+[ADR-PL-0002](../../adr/ADR-PL-0002-image-building-is-shared-platform-infrastructure.md) records
+why image building is shared infrastructure at all.
 
 As with every module in this repo, the `azurerm` provider is supplied by the caller — a root
 module, or [`examples/acr-local`](../../examples/acr-local/) — so the subscription and credentials

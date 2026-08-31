@@ -6,7 +6,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dir: [modules/ingress-nginx, examples/ingress-nginx-local, modules/observability, examples/observability-local]
+        dir:
+          - modules/ingress-nginx
+          - examples/ingress-nginx-local
+          - modules/observability
+          - examples/observability-local
+          - modules/acr
+          - examples/acr-local
+          - modules/buildkit
+          - examples/buildkit-local
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3

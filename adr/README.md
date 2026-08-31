@@ -9,6 +9,7 @@ provisions, and this repo's own boundary against `papeete-deploy` and `papeete-a
 | ID | Title | Status |
 |----|-------|--------|
 | [ADR-PL-0001](./ADR-PL-0001-papeete-platform-is-a-standalone-terraform-repo.md) | papeete-platform is a standalone Terraform repo for infra shared across actors and products | Accepted |
+| [ADR-PL-0002](./ADR-PL-0002-image-building-is-shared-platform-infrastructure.md) | Image building is shared platform infrastructure: in-cluster rootless BuildKit pushing to a cloud registry | Accepted |
 
 ## Authoring
 

@@ -6,7 +6,9 @@ socket**. One builder, shared by every actor and product in that cluster — not
 of them ([ADR-PL-0001](../../adr/ADR-PL-0001-papeete-platform-is-a-standalone-terraform-repo.md)).
 
 Built from `kubernetes_*` resources rather than a `helm_release`: BuildKit publishes an example
-manifest, not a chart, and the security context below is the entire substance of the module.
+manifest, not a chart, and the security context below is the entire substance of the module. Why
+this belongs here rather than in each actor that builds —
+[ADR-PL-0002](../../adr/ADR-PL-0002-image-building-is-shared-platform-infrastructure.md).
 
 As with every module here, the `kubernetes` provider is supplied by the caller — a root module, or
 [`examples/buildkit-local`](../../examples/buildkit-local/).
