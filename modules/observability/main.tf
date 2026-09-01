@@ -168,6 +168,22 @@ locals {
           foldersFromFilesStructure: true
   YAML
 
+  # Grafana's own Ingress, separate from grafana_default_values so it can be layered
+  # in only when a host is asked for. Host-based (one name, path "/") rather than a
+  # sub-path of a shared host on purpose: a sub-path would additionally need
+  # grafana.ini's server.root_url and serve_from_sub_path set, and Grafana would still
+  # emit absolute redirects that a rewrite annotation has to catch. A dedicated
+  # hostname needs none of that.
+  grafana_ingress_values = var.grafana_ingress_host == null ? "" : <<-YAML
+    ingress:
+      enabled: true
+      ingressClassName: ${var.grafana_ingress_class_name}
+      path: /
+      pathType: Prefix
+      hosts:
+        - ${var.grafana_ingress_host}
+  YAML
+
   elasticsearch_default_values = <<-YAML
     replicas: 1
     minimumMasterNodes: 1
@@ -284,7 +300,13 @@ resource "helm_release" "grafana" {
   namespace        = var.namespace
   create_namespace = var.create_namespace
 
-  values = var.grafana_values_yaml == null ? [local.grafana_default_values] : [local.grafana_default_values, var.grafana_values_yaml]
+  # compact() drops local.grafana_ingress_values when it is "" (no ingress host asked
+  # for). Caller-supplied values stay last, so they still override both defaults.
+  values = compact([
+    local.grafana_default_values,
+    local.grafana_ingress_values,
+    var.grafana_values_yaml == null ? "" : var.grafana_values_yaml,
+  ])
 
   dynamic "set" {
     for_each = var.grafana_set_values

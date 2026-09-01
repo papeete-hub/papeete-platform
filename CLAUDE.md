@@ -83,6 +83,16 @@ into a named folder. Elasticsearch + Kibana are a second, opt-in log store
 (`enable_elasticsearch_kibana`, default `false`) — genuinely different from Loki, not a
 replacement, and off by default.
 
+Grafana is optionally fronted by an `Ingress`: `grafana_ingress_host` is both the hostname and
+the on/off switch (`null` = no `Ingress`, port-forward only), rendered into
+`locals.grafana_ingress_values` as a separate values document and layered *between* the component
+default and any caller `values_yaml`, so a caller still overrides both. Deliberately a dedicated
+host rather than a sub-path of a shared one — a sub-path would drag in `grafana.ini`'s
+`server.root_url` / `serve_from_sub_path` plus a rewrite annotation for Grafana's absolute
+redirects. Making the name resolve is out of scope for every module here: nothing writes DNS or a
+hosts file, and `modules/ingress-nginx/README.md` is where the local hostname convention and its
+WSL2 hosts-file trap are documented.
+
 **Chart quirks discovered by actually deploying this against `docker-desktop`** (not visible from
 `terraform validate` alone — worth knowing before touching `main.tf`'s `locals`):
 - `opentelemetry-collector`'s fullname template appends the chart name unless the release name

@@ -15,6 +15,14 @@ variable "kube_context" {
   default     = "docker-desktop"
 }
 
+# Reachable once this name resolves to the ingress controller — see this example's README
+# for the hosts-file entry. Set to null to skip the Ingress and port-forward instead.
+variable "grafana_host" {
+  description = "Hostname to expose Grafana on. Null creates no Ingress."
+  type        = string
+  default     = "grafana.local"
+}
+
 provider "helm" {
   kubernetes {
     config_path    = "~/.kube/config"
@@ -24,6 +32,8 @@ provider "helm" {
 
 module "observability" {
   source = "../../modules/observability"
+
+  grafana_ingress_host = var.grafana_host
 }
 
 output "namespace" {
@@ -36,4 +46,8 @@ output "otlp_grpc_endpoint" {
 
 output "grafana_service_name" {
   value = module.observability.grafana_service_name
+}
+
+output "grafana_url" {
+  value = module.observability.grafana_url
 }

@@ -56,10 +56,14 @@ Four modules, each added against a concrete need rather than speculatively (ADR-
 Consequences):
 
 - [`modules/ingress-nginx`](./modules/ingress-nginx/) — an ingress controller, the one shared piece
-  of infra multiple actors in a cluster consistently need.
+  of infra multiple actors in a cluster consistently need. Its README covers
+  [reaching it from your machine](./modules/ingress-nginx/#reaching-the-controller-from-your-machine):
+  the local hostname convention (`grafana.local` for a platform service, `k8s.local/<product>/<environment>/…`
+  for product workloads) and the hosts-file entry that makes either resolve.
 - [`modules/observability`](./modules/observability/) — one telemetry pipeline every actor exports
-  to: OTel Collector on 4317 fanning out to Tempo, Loki and Prometheus, with Grafana pre-wired and
-  auto-discovering the dashboards products ship in their own namespaces.
+  to: OTel Collector on 4317 fanning out to Tempo, Loki and Prometheus, with Grafana pre-wired,
+  auto-discovering the dashboards products ship in their own namespaces, and optionally exposed on
+  a hostname of its own (`grafana_ingress_host`) rather than a port-forward.
 - [`modules/buildkit`](./modules/buildkit/) — rootless BuildKit as an ordinary Deployment, so an
   actor that needs to build an image no longer needs the node's Docker socket
   ([ADR-PL-0002](./adr/ADR-PL-0002-image-building-is-shared-platform-infrastructure.md)).

@@ -50,6 +50,13 @@ Per component (`<component>` is one of `otel_collector`, `prometheus`, `loki`, `
 | `<component>_set_values` | Helm `--set`-style overrides, as a map | `{}` |
 | `<component>_values_yaml` | A full `values.yaml` document, layered on top of this module's own opinionated default for that component | `null` (default used as-is) |
 
+Grafana only — reaching the UI without a port-forward:
+
+| Name | Description | Default |
+|---|---|---|
+| `grafana_ingress_host` | Hostname to expose Grafana on. Doubles as the on/off switch: `null` creates no `Ingress` at all | `null` |
+| `grafana_ingress_class_name` | Ingress class to route through. Only read when `grafana_ingress_host` is set | `"nginx"` |
+
 ## Outputs
 
 | Name | Description |
@@ -57,6 +64,51 @@ Per component (`<component>` is one of `otel_collector`, `prometheus`, `loki`, `
 | `namespace` | Namespace the stack landed in |
 | `otlp_grpc_endpoint` | `otel-collector.<namespace>.svc.cluster.local:4317` — every actor points `OTEL_EXPORTER_OTLP_ENDPOINT` here |
 | `grafana_service_name` | In-cluster service name for Grafana |
+| `grafana_url` | `http://<grafana_ingress_host>`, or `null` when no Ingress was asked for |
+
+## Reaching Grafana
+
+Unset, `grafana_ingress_host` leaves Grafana on a `ClusterIP` Service with no `Ingress` — the only
+way in is a port-forward, which dies with the terminal that started it:
+
+```bash
+kubectl -n observability port-forward svc/grafana 3000:80
+```
+
+Set it, and Grafana gets an `Ingress` on that hostname routed through
+[`modules/ingress-nginx`](../ingress-nginx/)'s class:
+
+```hcl
+module "observability" {
+  source = "../../modules/observability"
+
+  grafana_ingress_host = "grafana.local"
+}
+```
+
+**A dedicated hostname, not a sub-path of a shared one.** `grafana.local` rather than
+`k8s.local/grafana` is a deliberate choice, not a stylistic one: served under a sub-path Grafana
+additionally needs `grafana.ini`'s `server.root_url` and `server.serve_from_sub_path` set, and it
+still emits absolute redirects and asset URLs that an ingress rewrite annotation then has to catch.
+Its own hostname needs none of that, which is why the `ingress` block this module layers in is
+four lines and carries no annotations.
+
+**Making the name resolve is the caller's job.** Nothing in this module writes DNS or a hosts
+file — Terraform creates the `Ingress`, and the hostname is inert until something resolves it to
+the ingress controller. Locally that means a hosts-file entry pointing at the controller's
+address; see [`modules/ingress-nginx`](../ingress-nginx/#reaching-the-controller-from-your-machine)
+for how to find that address and which hosts file to edit (there is a WSL2 trap). The Ingress
+itself can be verified without touching any of that, by supplying the name as a header:
+
+```bash
+curl -sI -H 'Host: grafana.local' http://<controller address>/login    # 200 once routed
+```
+
+Grafana's admin password is generated into a Secret by the chart either way:
+
+```bash
+kubectl -n observability get secret grafana -o jsonpath='{.data.admin-password}' | base64 -d
+```
 
 ## What every actor's overlay needs to know
 
