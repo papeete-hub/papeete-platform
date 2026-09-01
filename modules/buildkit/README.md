@@ -87,13 +87,27 @@ It dies with the pod, and a restart means a cold rebuild. Deliberate: a build ca
 rebuildable optimisation, and a PVC would tie this module to a storage class. Revisit if cold
 builds start hurting.
 
-## Credentials
+## Credentials — and where they actually belong
 
-`registry_auth` becomes a `kubernetes.io/dockerconfigjson` Secret, mounted read-only with its
-`.dockerconfigjson` key **projected to `config.json`** — `buildctl` reads `$DOCKER_CONFIG/config.json`
-and would not find the Secret's own key name. The credential lands in Terraform state, as any
-provider-managed secret does; scope the token to the repositories it needs
-([`modules/acr`](../acr/) issues exactly such a token) rather than relying on a registry-wide one.
+**`registry_auth` here does NOT authorize a remote client's push.** `buildctl` resolves registry
+credentials **client-side**, from its own `$DOCKER_CONFIG/config.json`, and hands them to buildkitd
+over the build session. The daemon does not authenticate on a client's behalf: offered nothing, it
+falls back to an anonymous token, and a push to a private registry fails with
+
+```
+failed to authorize: failed to fetch anonymous token … 401 Unauthorized
+```
+
+after the build has otherwise completed. So **every workload that runs `buildctl` needs the push
+credential mounted as its own `$DOCKER_CONFIG/config.json`** — the builder having one is not
+enough, and is easy to mistake for enough if you test by `kubectl exec`ing into this pod, where
+client and daemon happen to be the same container.
+
+`registry_auth` remains available for what the daemon does on its own account, and defaults to
+null. When set it becomes a `kubernetes.io/dockerconfigjson` Secret mounted read-only with its
+`.dockerconfigjson` key **projected to `config.json`**, since that is the name `buildctl` reads.
+Scope the token to the repositories it needs ([`modules/acr`](../acr/) issues exactly such a
+token) rather than relying on a registry-wide one.
 
 ## Verified against
 

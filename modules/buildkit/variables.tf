@@ -40,7 +40,7 @@ variable "port" {
 }
 
 variable "registry_auth" {
-  description = "Credentials buildkitd pushes with, written into a kubernetes.io/dockerconfigjson Secret and mounted at $DOCKER_CONFIG/config.json. Null builds images without being able to publish them."
+  description = "Credentials for what the DAEMON does on its own account, written into a kubernetes.io/dockerconfigjson Secret and mounted at $DOCKER_CONFIG/config.json. This is NOT what authorizes a remote buildctl client's push — that client resolves registry auth itself and hands it over the session, so it needs its own $DOCKER_CONFIG. See the module README."
   type = object({
     server   = string
     username = string
