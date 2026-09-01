@@ -44,7 +44,7 @@ module "acr" {
 | `location` | Azure region | *required* |
 | `repository_patterns` | Repository paths both tokens are scoped to, e.g. `["bnk.rlvr/*"]` | *required* |
 | `sku` | Registry SKU — tokens need `Premium` | `"Premium"` |
-| `admin_enabled` | Enable the registry's single admin account | `false` |
+| `admin_enabled` | Enable the registry's single admin account — see below | `false` |
 | `token_password_expiry` | RFC3339 expiry for both token passwords | `null` (never) |
 | `tags` | Azure resource tags | `{}` |
 
@@ -57,6 +57,7 @@ module "acr" {
 | `id` | Resource id, for role assignments the caller owns |
 | `push_username` / `push_password` | The push token's credentials (password sensitive) |
 | `pull_username` / `pull_password` | The read-only token's credentials (password sensitive) |
+| `admin_username` / `admin_password` | The admin account's credentials, null unless `admin_enabled` |
 
 ## Scoping
 
@@ -70,6 +71,19 @@ A trailing `/*` matches everything below a path, so `bnk.rlvr/*` covers
 reach a repository outside the declared patterns, and neither can delete: retention is an
 `az acr run --cmd "acr purge …"` operation under the caller's own credentials, not something a
 build should be able to do by accident.
+
+## The admin account stays off
+
+`admin_enabled` defaults to `false` and should stay there. It is a single registry-wide credential
+with no scoping and no rotation story, and nothing needs it: a Pod pulls with the pull token, a
+builder pushes with the push token.
+
+It exists as a variable because Docker Desktop's pull-through mirror appears to need it — the
+mirror can only authenticate to a private registry from the host's credential store, and a
+scope-mapped token does not satisfy its resolver. That turns out to be a dead end anyway: the
+mirror also mishandles ACR's blob redirects, so it cannot serve these images regardless. The
+working answer is one `hosts.toml` on the node, which
+[`examples/acr-local`](../../examples/acr-local/) writes and explains.
 
 ## Why tokens rather than a service principal
 

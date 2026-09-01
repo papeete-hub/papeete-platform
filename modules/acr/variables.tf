@@ -40,7 +40,7 @@ variable "sku" {
 }
 
 variable "admin_enabled" {
-  description = "Whether the registry's single admin account is enabled. Left off: scope-mapped tokens are the credential this module exists to issue."
+  description = "Whether the registry's single admin account is enabled. Off by default: scope-mapped tokens are the credential this module exists to issue. Turn it on only where something needs a registry-wide credential — Docker Desktop's pull-through mirror is the known case, and examples/acr-local explains why."
   type        = bool
   default     = false
 }

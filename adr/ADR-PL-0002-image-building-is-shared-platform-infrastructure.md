@@ -97,6 +97,17 @@ Removing the need for a bare host process is the fix.
 - **Inherited, not widened — ADR-PL-0001's open item.** Nothing links a `product.yaml`'s
   `environment` to "this cluster needs `buildkit` and a registry applied first." These two modules
   inherit that gap exactly as `ingress-nginx` does.
+- **Docker Desktop needs one `hosts.toml` per registry, and only Docker Desktop does.** Its node
+  routes every registry through `kind-registry-mirror`, which cannot serve a private registry: it
+  has no credential store of its own, and it forwards the ACR bearer token across ACR's blob
+  redirect to Azure Storage, which rejects it — the node then reports a short read and does not
+  fall back. One per-registry `hosts.toml` takes the registry out of the mirror's path (measured:
+  deterministic 11–13s pulls, versus indefinite `ImagePullBackOff` without). It names a stable
+  public hostname rather than a ClusterIP, needs no `hostAliases` and no privileged DaemonSet, so
+  it is a documented local prerequisite `examples/acr-local` applies — not the node coupling this
+  ADR rejected. Clusters without that mirror need nothing.
+- **The registry's admin account stays disabled.** It looked necessary while the mirror was still
+  in the path; with the bypass, a least-privilege pull token is sufficient.
 - **AppArmor is set by annotation, not by field**, because the `kubernetes` provider still has no
   `app_armor_profile` in `security_context`. The annotation is deprecated in favour of that field
   and remains honoured; swap it when the provider catches up.

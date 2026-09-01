@@ -34,3 +34,14 @@ output "pull_password" {
   value       = azurerm_container_registry_token_password.pull.password1[0].value
   sensitive   = true
 }
+
+output "admin_username" {
+  description = "Admin account username (the registry name). Null unless var.admin_enabled — and prefer a token: this credential is registry-wide."
+  value       = var.admin_enabled ? azurerm_container_registry.this.admin_username : null
+}
+
+output "admin_password" {
+  description = "Admin account password. Null unless var.admin_enabled."
+  value       = var.admin_enabled ? azurerm_container_registry.this.admin_password : null
+  sensitive   = true
+}
