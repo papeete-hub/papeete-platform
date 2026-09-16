@@ -140,6 +140,18 @@ variable "grafana_values_yaml" {
   default     = null
 }
 
+variable "grafana_ingress_host" {
+  description = "Hostname to expose Grafana on through the cluster's ingress controller (e.g. \"grafana.local\"). Leave null and no Ingress is created at all — reach Grafana by port-forward instead. This doubles as the on/off switch deliberately: an ingress enabled without a host has no meaning, so there is no separate boolean to get out of sync with it."
+  type        = string
+  default     = null
+}
+
+variable "grafana_ingress_class_name" {
+  description = "Ingress class the Grafana Ingress is routed through. Only read when grafana_ingress_host is set. Defaults to the class modules/ingress-nginx installs."
+  type        = string
+  default     = "nginx"
+}
+
 # --- Elasticsearch + Kibana (opt-in, default off) ------------------------------
 
 variable "enable_elasticsearch_kibana" {
