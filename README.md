@@ -26,8 +26,13 @@ modules/
   observability/     OTel Collector, Tempo, Loki, Prometheus, Grafana — one telemetry pipeline
   buildkit/          rootless in-cluster image building, no Docker socket anywhere
   acr/               an Azure Container Registry with scope-mapped push and pull tokens
+  rabbitmq/          one broker for the cluster, one vhost per product
+  sqlserver/         one database server for the cluster, one database per product
+  secret-reflector/  mirrors a platform credential into product namespaces, as they appear
 examples/
   <name>-local/      the worked example for each, against Docker Desktop's Kubernetes
+environments/
+  local-platform/    the shared services, applied once to a local cluster and meant to stay
 ```
 
 Each module under `modules/` is a complete, independently deployable root module — no wrapper, no
@@ -52,7 +57,7 @@ terraform apply
 
 ## What's here today
 
-Four modules, each added against a concrete need rather than speculatively (ADR-PL-0001's
+Seven modules, each added against a concrete need rather than speculatively (ADR-PL-0001's
 Consequences):
 
 - [`modules/ingress-nginx`](./modules/ingress-nginx/) — an ingress controller, the one shared piece
@@ -65,9 +70,29 @@ Consequences):
   ([ADR-PL-0002](./adr/ADR-PL-0002-image-building-is-shared-platform-infrastructure.md)).
 - [`modules/acr`](./modules/acr/) — where what it builds goes, with a push token for the builder
   and a read-only token for everything that runs the result.
+- [`modules/rabbitmq`](./modules/rabbitmq/) — one broker for the cluster, with a vhost per product
+  created from a definitions document the broker imports at boot.
+- [`modules/sqlserver`](./modules/sqlserver/) — one SQL Server for the cluster, with a database per
+  product created by a provisioning Job.
+- [`modules/secret-reflector`](./modules/secret-reflector/) — how a product's pod gets the
+  credential for either of those without anyone copying it by hand
+  ([ADR-PL-0004](./adr/ADR-PL-0004-platform-credentials-reach-products-by-reflection.md)).
 
-The last two are built from `kubernetes_*` / `azurerm_*` resources rather than a `helm_release` —
-neither has a chart worth installing. Each module's README says which it is.
+The last four are built from `kubernetes_*` / `azurerm_*` resources rather than a `helm_release` —
+none has a chart worth installing. Each module's README says which it is.
+
+**A shared component is shared, and a product gets a tenant on it.** One broker with a vhost per
+product, one database server with a database per product — never a broker or a server per product.
+Both modules take that list of names as a required input with no default, the way `acr` takes
+`repository_patterns`: the component is product-agnostic, and what lives on it is the caller's
+declaration. Both default to the same `platform` namespace, so one namespace holds the shared
+services.
+
+**And a product finds them without being told.** Each publishes a per-tenant connection Secret at a
+well-known name, which the reflector mirrors into every matching namespace *as that namespace is
+created* — so a per-PR stand-up needs no re-apply and no credential in its own manifest.
+[`environments/local-platform`](./environments/local-platform/) wires all three together and is the
+place to start.
 
 ## Boundary
 

@@ -10,3 +10,6 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+
+# Serena (code-intelligence server) project state — local to each machine
+.serena/
