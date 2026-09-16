@@ -34,6 +34,17 @@ locals {
             insecure: true
         prometheus:
           endpoint: 0.0.0.0:8889
+          # WITHOUT THIS, RESOURCE ATTRIBUTES ARE NOT METRIC LABELS. An OTLP metric carries
+          # its Resource (service.name, and everything in the sender's
+          # OTEL_RESOURCE_ATTRIBUTES) separately from the datapoint's own attributes. This
+          # exporter maps datapoint attributes to Prometheus labels and, by default, drops the
+          # Resource — so `reliever_events_published_total` arrived with `routing_key` but with
+          # NO `capability_id`, `zone`, `deployable` or `environment`, and a dashboard could not
+          # break the product down by capability. ADR-TECH-STRAT-005 Rule 8 makes those four
+          # mandatory ON EVERY METRIC, which is a statement about what arrives here, not only
+          # about what senders set.
+          resource_to_telemetry_conversion:
+            enabled: true
       service:
         pipelines:
           traces:
@@ -128,6 +139,12 @@ locals {
         apiVersion: 1
         datasources:
           - name: Prometheus
+            # A STABLE uid, because a provisioned dashboard references a datasource BY uid, not
+            # by name. Without one Grafana assigns a random uid per install, so a dashboard
+            # ConfigMap that names `prometheus` renders "Datasource not found" on every panel —
+            # and would do so again after any reinstall even if it were corrected by hand. Loki
+            # and Tempo below already carry theirs.
+            uid: prometheus
             type: prometheus
             access: proxy
             url: http://prometheus-server.${var.namespace}.svc.cluster.local
@@ -146,7 +163,12 @@ locals {
             uid: tempo
             type: tempo
             access: proxy
-            url: http://tempo.${var.namespace}.svc.cluster.local:3100
+            # 3200, NOT 3100. Tempo's HTTP query API listens on 3200; 3100 is LOKI's port, and
+            # the two were transposed here. The symptom is not an obvious failure: the
+            # datasource saves, panels just return nothing, and "Test" reports failure in a way
+            # easy to read as "no traces yet". Verified against the running Service, which
+            # publishes 3200 (and 4317 for ingest) and no 3100 at all.
+            url: http://tempo.${var.namespace}.svc.cluster.local:3200
             isDefault: true
             jsonData:
               tracesToLogsV2:

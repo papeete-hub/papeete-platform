@@ -71,7 +71,30 @@ env:
     value: http://otel-collector.observability.svc.cluster.local:4317
 ```
 
+Whatever an actor puts in `OTEL_RESOURCE_ATTRIBUTES` reaches Prometheus as metric **labels**,
+not only Tempo and Loki — the Collector's `prometheus` exporter is configured with
+`resource_to_telemetry_conversion`. Without it a metric arrives with its datapoint attributes and
+none of its Resource, so a dashboard cannot group by `capability_id` even though every sender
+sets it.
+
 This module never reads or writes anything under an actor's folder.
+
+## Datasource uids
+
+Provisioned dashboards reference a datasource **by uid**, so all three are fixed here rather than
+left to Grafana's per-install random assignment — a dashboard ConfigMap naming `prometheus` would
+otherwise render "Datasource not found" on every panel, and break again on the next reinstall
+even after a hand fix.
+
+| Datasource | uid | URL |
+|---|---|---|
+| Prometheus | `prometheus` | `http://prometheus-server.<namespace>.svc.cluster.local` |
+| Loki | `loki` | `http://loki.<namespace>.svc.cluster.local:3100` |
+| Tempo | `tempo` | `http://tempo.<namespace>.svc.cluster.local:3200` |
+
+> **Tempo is 3200, Loki is 3100.** These were transposed until now, and the failure is quiet: the
+> datasource saves, panels simply return nothing, and "Save & test" fails in a way that reads
+> like "no traces ingested yet" rather than "wrong port".
 
 ## Verified against
 
