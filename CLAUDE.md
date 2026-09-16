@@ -52,10 +52,18 @@ and instantiates the module directly (`source = "../../modules/<name>"`). No wra
 stack combining modules. A module never configures its own provider — the caller always supplies
 it, which is what keeps a module reusable across environments.
 
-Not every module is a Helm install. `modules/acr` and `modules/buildkit` are built from
-`azurerm_*` / `kubernetes_*` provider resources — neither has a chart worth installing
+Not every module is a Helm install. `modules/acr`, `modules/buildkit`, `modules/rabbitmq` and
+`modules/sqlserver` are built from `azurerm_*` / `kubernetes_*` provider resources — none has a
+chart worth installing
 ([ADR-PL-0002](./adr/ADR-PL-0002-image-building-is-shared-platform-infrastructure.md)) — so the
 variable shape below applies to the Helm modules and does not generalise to them.
+
+**A shared component is shared; a product gets a tenant on it.** `modules/rabbitmq` is one broker
+with a `vhosts` list, `modules/sqlserver` one server with a `databases` list — never one per
+product. Both are required inputs with no default, following `modules/acr`'s `repository_patterns`:
+that is how a module stays product-agnostic while the caller declares what lives on it. Both
+default to namespace `platform`, so the second one installed there needs
+`create_namespace = false`.
 
 Within a Helm module, every `helm_release` follows the same per-resource variable shape:
 `chart_version` (nullable, unpinned = latest), `set_values` (map, `--set`-style, via a `dynamic
@@ -99,6 +107,36 @@ replacement, and off by default.
   `"trace_id=(\w+)"` is invalid YAML — `\w` isn't a recognized escape), while the *Terraform*
   heredoc itself does not touch backslashes at all. Use single-quoted YAML strings for anything
   with a literal backslash.
+
+### `modules/rabbitmq` and `modules/sqlserver`
+
+**Discovered by actually applying these against `docker-desktop`** — none of it is visible from
+`terraform validate`:
+
+- **Importing RabbitMQ definitions suppresses the default `/` vhost.** A stock broker has `/` and
+  `guest`; one booting with `load_definitions` has only what the document declares —
+  `rabbitmqctl list_vhosts` confirms it. A client connecting with no vhost in its URI therefore
+  fails, which is what you want on a shared broker.
+- **Both import and `CREATE DATABASE` add but never remove.** Dropping a name from `vhosts` or
+  `databases` leaves the vhost or database in place, and Terraform reports no difference — the
+  declared list is the input, not the server's state. Deleting is a deliberate manual act.
+- **`sqlcmd`'s path differs by image.** `mcr.microsoft.com/mssql-tools` has it at
+  `/opt/mssql-tools/bin/sqlcmd`; ODBC 18 images (including the server image) use
+  `/opt/mssql-tools18/bin/sqlcmd`. There is no `mssql-tools18` repository on MCR — that 404s.
+  Hence the `sqlcmd_path` variable; a wrong value fails only at apply.
+- **SQL Server's `fs_group` is load-bearing.** The image runs as uid 10001 and cannot create
+  `master` on a PVC it may not write, so it exits on startup. RabbitMQ needs the same for uid 999.
+- **A Job's pod template is immutable**, so the database-provisioning Job is named after a hash of
+  the SQL it runs; that is what makes an added database appear on the next apply rather than
+  silently doing nothing.
+- **Readiness is not "accepts a login".** SQL Server opens 1433 well before it will authenticate,
+  so the Job retries `SELECT 1` rather than trusting the probe — measured at ~5s after ready.
+- **Bitnami charts are no longer an option for these.** `docker.io/bitnami/rabbitmq` lists zero
+  tags (the free catalogue moved to `bitnamilegacy`), so the chart cannot pull. Check Docker Hub
+  before reaching for a Bitnami chart in this repo.
+- **Each `-local` example uses its own namespace**, not the modules' shared `platform` default:
+  two examples are two states, so both creating one namespace collides. The shared-namespace
+  shape (`create_namespace = false` on the second) lives in the module READMEs.
 
 ## ADRs
 

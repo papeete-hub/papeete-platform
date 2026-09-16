@@ -15,6 +15,10 @@ jobs:
           - examples/acr-local
           - modules/buildkit
           - examples/buildkit-local
+          - modules/rabbitmq
+          - examples/rabbitmq-local
+          - modules/sqlserver
+          - examples/sqlserver-local
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
