@@ -41,3 +41,8 @@ output "sa_secret_name" {
   description = "Name of the Secret holding the sa password, for a workload that would rather mount it than take the connection string."
   value       = kubernetes_secret.sa_password.metadata[0].name
 }
+
+output "connection_secret_names" {
+  description = "Name of the connection Secret for each database, keyed by database — what a pod puts in envFrom.secretRef. Not sensitive: these are names, not credentials."
+  value       = { for db in var.databases : db => kubernetes_secret.connection[db].metadata[0].name }
+}

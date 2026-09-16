@@ -41,3 +41,8 @@ output "management_url" {
   description = "In-cluster URL of the management UI and HTTP API. Reach it locally with: kubectl -n <namespace> port-forward svc/<service_name> <management_port>."
   value       = "http://${kubernetes_service.this.metadata[0].name}.${local.namespace}.svc.cluster.local:${var.management_port}"
 }
+
+output "connection_secret_names" {
+  description = "Name of the connection Secret for each vhost, keyed by vhost — what a pod puts in envFrom.secretRef. Not sensitive: these are names, not credentials."
+  value       = { for v in var.vhosts : v => kubernetes_secret.connection[v].metadata[0].name }
+}

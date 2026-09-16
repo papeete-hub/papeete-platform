@@ -83,6 +83,24 @@ Two consequences worth knowing:
   `rabbitmqctl delete_vhost <name>`. Terraform will not report the difference, because the
   definitions document is the input, not the broker's state.
 
+## How a product finds it
+
+Each vhost gets a **connection Secret** at a well-known name — `platform-rabbitmq-<vhost>` — shaped
+for `envFrom`:
+
+```yaml
+envFrom:
+  - secretRef:
+      name: platform-rabbitmq-reliever   # RABBITMQ_URI, _HOST, _PORT, _VHOST, _USERNAME, _PASSWORD
+```
+
+A Secret is namespace-scoped, so by default that only helps a pod in this namespace. Set
+`reflect_to_namespaces` to a regex and the Secret is annotated for
+[`modules/secret-reflector`](../secret-reflector/), which mirrors it into every matching namespace
+**including ones created later** — the per-PR stand-up case a list of namespaces cannot serve
+([ADR-PL-0004](../../adr/ADR-PL-0004-platform-credentials-reach-products-by-reflection.md)). The
+annotations are inert if no reflector is installed.
+
 ## Credentials
 
 One administrator user, with full permissions on every declared vhost, from the required
@@ -138,11 +156,13 @@ receive secrets, not about this module.
 | `storage_class_name` | `string` | `null` | Null uses the cluster default. |
 | `extra_config` | `string` | `""` | Appended to `rabbitmq.conf`. |
 | `resources` | `object` | `null` | Unconstrained by default. |
+| `connection_secret_prefix` | `string` | `platform-rabbitmq` | Well-known name products reference. |
+| `reflect_to_namespaces` | `string` | `null` | Regex; null publishes nothing beyond this namespace. |
 
 ## Outputs
 
 `namespace`, `service_name`, `host`, `amqp_port`, `amqp_endpoint`, `amqp_uris` (sensitive, keyed by
-vhost), `vhosts`, `management_url`.
+vhost), `vhosts`, `management_url`, `connection_secret_names` (keyed by vhost).
 
 Reach the management UI locally:
 

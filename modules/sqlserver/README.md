@@ -73,6 +73,24 @@ already in the cluster.
   database — deliberately, since a `DROP DATABASE` triggered by editing a list is not a mistake
   anyone should be one keystroke from. Terraform will not report the difference.
 
+## How a product finds it
+
+Each database gets a **connection Secret** at a well-known name — `platform-sqlserver-<database>` —
+shaped for `envFrom`:
+
+```yaml
+envFrom:
+  - secretRef:
+      name: platform-sqlserver-reliever  # SQLSERVER_CONNECTION_STRING, _HOST, _PORT, _DATABASE, _USERNAME, _PASSWORD
+```
+
+A Secret is namespace-scoped, so by default that only helps a pod in this namespace. Set
+`reflect_to_namespaces` to a regex and the Secret is annotated for
+[`modules/secret-reflector`](../secret-reflector/), which mirrors it into every matching namespace
+**including ones created later** — the per-PR stand-up case a list of namespaces cannot serve
+([ADR-PL-0004](../../adr/ADR-PL-0004-platform-credentials-reach-products-by-reflection.md)). The
+annotations are inert if no reflector is installed.
+
 ## Licensing
 
 `edition` sets `MSSQL_PID` and defaults to **`Developer`**: full-featured, free, and licensed for
@@ -140,11 +158,13 @@ of split when [`acr`](../acr/) arrived.
 | `provisioning_timeout_seconds` | `number` | `300` | Job-side; keep below the above. |
 | `extra_env` | `map(string)` | `{}` | e.g. `MSSQL_COLLATION`. |
 | `resources` | `object` | `null` | Needs ≥2GiB to start. |
+| `connection_secret_prefix` | `string` | `platform-sqlserver` | Well-known name products reference. |
+| `reflect_to_namespaces` | `string` | `null` | Regex; null publishes nothing beyond this namespace. |
 
 ## Outputs
 
 `namespace`, `service_name`, `host`, `port`, `endpoint`, `databases`, `connection_strings`
-(sensitive, keyed by database), `sa_secret_name`.
+(sensitive, keyed by database), `sa_secret_name`, `connection_secret_names` (keyed by database).
 
 Connect locally:
 

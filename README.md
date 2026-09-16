@@ -28,8 +28,11 @@ modules/
   acr/               an Azure Container Registry with scope-mapped push and pull tokens
   rabbitmq/          one broker for the cluster, one vhost per product
   sqlserver/         one database server for the cluster, one database per product
+  secret-reflector/  mirrors a platform credential into product namespaces, as they appear
 examples/
   <name>-local/      the worked example for each, against Docker Desktop's Kubernetes
+environments/
+  local-platform/    the shared services, applied once to a local cluster and meant to stay
 ```
 
 Each module under `modules/` is a complete, independently deployable root module — no wrapper, no
@@ -54,7 +57,7 @@ terraform apply
 
 ## What's here today
 
-Six modules, each added against a concrete need rather than speculatively (ADR-PL-0001's
+Seven modules, each added against a concrete need rather than speculatively (ADR-PL-0001's
 Consequences):
 
 - [`modules/ingress-nginx`](./modules/ingress-nginx/) — an ingress controller, the one shared piece
@@ -71,6 +74,9 @@ Consequences):
   created from a definitions document the broker imports at boot.
 - [`modules/sqlserver`](./modules/sqlserver/) — one SQL Server for the cluster, with a database per
   product created by a provisioning Job.
+- [`modules/secret-reflector`](./modules/secret-reflector/) — how a product's pod gets the
+  credential for either of those without anyone copying it by hand
+  ([ADR-PL-0004](./adr/ADR-PL-0004-platform-credentials-reach-products-by-reflection.md)).
 
 The last four are built from `kubernetes_*` / `azurerm_*` resources rather than a `helm_release` —
 none has a chart worth installing. Each module's README says which it is.
@@ -81,6 +87,12 @@ Both modules take that list of names as a required input with no default, the wa
 `repository_patterns`: the component is product-agnostic, and what lives on it is the caller's
 declaration. Both default to the same `platform` namespace, so one namespace holds the shared
 services.
+
+**And a product finds them without being told.** Each publishes a per-tenant connection Secret at a
+well-known name, which the reflector mirrors into every matching namespace *as that namespace is
+created* — so a per-PR stand-up needs no re-apply and no credential in its own manifest.
+[`environments/local-platform`](./environments/local-platform/) wires all three together and is the
+place to start.
 
 ## Boundary
 

@@ -19,6 +19,9 @@ jobs:
           - examples/rabbitmq-local
           - modules/sqlserver
           - examples/sqlserver-local
+          - modules/secret-reflector
+          - examples/secret-reflector-local
+          - environments/local-platform
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3

@@ -136,3 +136,15 @@ variable "resources" {
   })
   default = null
 }
+
+variable "connection_secret_prefix" {
+  description = "Name prefix for the per-database connection Secrets — the well-known name a product's manifest references. A database named 'reliever' yields 'platform-sqlserver-reliever' by default."
+  type        = string
+  default     = "platform-sqlserver"
+}
+
+variable "reflect_to_namespaces" {
+  description = "Regex (or comma-separated regexes) of namespaces the connection Secrets are mirrored into by modules/secret-reflector, matched against namespaces that exist now AND ones created later. Null, the default, annotates nothing: the Secrets stay in this namespace and only a same-namespace pod can use them. Requires modules/secret-reflector to be installed in the cluster — the annotations are inert without it."
+  type        = string
+  default     = null
+}

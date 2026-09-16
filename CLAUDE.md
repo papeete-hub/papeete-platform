@@ -52,6 +52,12 @@ and instantiates the module directly (`source = "../../modules/<name>"`). No wra
 stack combining modules. A module never configures its own provider — the caller always supplies
 it, which is what keeps a module reusable across environments.
 
+That prohibition is about `modules/`. An **environment** root module is a different thing and is
+allowed: `environments/local-platform/` supplies its own providers, owns its own state, combines
+several modules, and exists to be *applied* rather than `source`d — nothing under `modules/`
+depends on it. ADR-PL-0003 anticipated exactly this when it put an environment's backend in "the
+root module that owns that environment".
+
 Not every module is a Helm install. `modules/acr`, `modules/buildkit`, `modules/rabbitmq` and
 `modules/sqlserver` are built from `azurerm_*` / `kubernetes_*` provider resources — none has a
 chart worth installing
@@ -64,6 +70,14 @@ product. Both are required inputs with no default, following `modules/acr`'s `re
 that is how a module stays product-agnostic while the caller declares what lives on it. Both
 default to namespace `platform`, so the second one installed there needs
 `create_namespace = false`.
+
+**A product finds a shared component by name, never by being told.** Each publishes a per-tenant
+connection Secret (`platform-<component>-<tenant>`, shaped for `envFrom`), and
+`modules/secret-reflector` mirrors it into every namespace matching `reflect_to_namespaces` —
+including namespaces created later, which is the per-PR stand-up case a caller-declared list cannot
+serve ([ADR-PL-0004](./adr/ADR-PL-0004-platform-credentials-reach-products-by-reflection.md)). A
+Secret is namespace-scoped, so without the reflector those Secrets help only a same-namespace pod;
+the annotations are inert when it is not installed.
 
 Within a Helm module, every `helm_release` follows the same per-resource variable shape:
 `chart_version` (nullable, unpinned = latest), `set_values` (map, `--set`-style, via a `dynamic
@@ -134,6 +148,9 @@ replacement, and off by default.
 - **Bitnami charts are no longer an option for these.** `docker.io/bitnami/rabbitmq` lists zero
   tags (the free catalogue moved to `bitnamilegacy`), so the chart cannot pull. Check Docker Hub
   before reaching for a Bitnami chart in this repo.
+- **Reflection is a copy, and deleting the source deletes every mirror** — so destroying the
+  platform empties every consumer namespace. `reflection-auto-enabled` is the annotation that
+  makes a namespace created later get a copy; without it a mirror must be requested per consumer.
 - **Each `-local` example uses its own namespace**, not the modules' shared `platform` default:
   two examples are two states, so both creating one namespace collides. The shared-namespace
   shape (`create_namespace = false` on the second) lives in the module READMEs.
