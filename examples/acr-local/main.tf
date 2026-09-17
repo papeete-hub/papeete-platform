@@ -84,9 +84,20 @@ module "acr" {
   resource_group_name = azurerm_resource_group.this.name
   location            = azurerm_resource_group.this.location
 
-  # The two breeds of image the foundry product publishes: capability-scoped components and
-  # their tests under bnk.rlvr/, product-scoped actor images under foundry/.
-  repository_patterns = ["bnk.rlvr/*", "foundry/*"]
+  # Three paths, because two products share this registry and papeete-deploy looks for an image
+  # under `<product>/<actor>` (ADR-PD-0006) while a CAPABILITY's own images live under
+  # `bnk.rlvr/<type.nnn.code>/`:
+  #   bnk.rlvr/*   capability-scoped components and their test images, published by the
+  #                implementation and testing actors during a round;
+  #   foundry/*    the foundry product's actor images;
+  #   reliever/*   the reliever product's copy of the components it runs, put there by
+  #                reliever-product/PublishComponents.sh.
+  #
+  # `reliever/*` was added to the live scope maps out of band and was missing here, so an apply
+  # would have REVOKED it — on both tokens. That breaks more than publishing: `acr-pull` is what
+  # reliever-local pulls every one of its images with, so the namespace would have stopped being
+  # able to start. Declared now, which is the only place it is true.
+  repository_patterns = ["bnk.rlvr/*", "foundry/*", "reliever/*"]
 }
 
 resource "azurerm_resource_group" "this" {
