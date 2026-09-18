@@ -122,6 +122,15 @@ replacement, and off by default.
   heredoc itself does not touch backslashes at all. Use single-quoted YAML strings for anything
   with a literal backslash.
 
+### `modules/acr`
+
+- **Enabling the admin account takes two applies.** Flipping `admin_enabled` to `true` and reading
+  `admin_username` / `admin_password` in the same apply yields empty strings, because Azure creates
+  them during the update and the provider answers from a response that predates them. Terraform
+  still reports success, so anything consuming those outputs — in `examples/acr-local`, the
+  `acr-pull` Secret — is silently written with `""`. Apply a second time, and verify with the
+  credential rather than the exit code. Details in the module README.
+
 ### `modules/rabbitmq` and `modules/sqlserver`
 
 **Discovered by actually applying these against `docker-desktop`** — none of it is visible from

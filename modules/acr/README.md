@@ -79,6 +79,35 @@ because it is a good credential. If an environment needs the push/pull split bac
 not Premium — it is an Entra service principal per role (`AcrPush`, `AcrPull`), which works on
 Basic and which ADR-PL-0006 records as the deliberate follow-up.
 
+## Enabling the admin account takes two applies
+
+**Measured, applying this against the live registry.** Turning `admin_enabled` from `false` to
+`true` and reading `admin_username` / `admin_password` in the *same* apply yields **empty strings**,
+not credentials. Azure creates them as part of the update, and the `azurerm` provider composes its
+result from a response that predates them. Terraform reports `Apply complete!` and every consumer
+of those outputs is silently wired to `""`.
+
+That is not cosmetic: on the first apply here, `examples/acr-local`'s `acr-pull` Secret was rewritten
+with an empty username and a zero-length password — a Secret that exists, looks right to
+`kubectl get`, and cannot pull. A second `terraform apply` refreshes the registry, finds the
+credentials and plans a one-resource change to fix it:
+
+```
+~ username = "" -> "papeetefoundry"
+```
+
+So an environment that enables the admin account must apply twice, and the check that it worked is
+the credential itself rather than Terraform's exit code:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' \
+  -u "$(terraform output -raw username):$(terraform output -raw password)" \
+  https://<registry>.azurecr.io/v2/_catalog        # 200, not 401
+```
+
+This does not apply to a registry created with `admin_enabled = true` from the start — only to
+flipping it on an existing one, which is exactly what the move off Premium does.
+
 ## Storage
 
 Basic includes **10 GB**; beyond that ACR bills per GB/day. This registry held 4.9 GB when it moved
