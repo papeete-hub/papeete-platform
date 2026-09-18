@@ -31,7 +31,7 @@ module "rabbitmq" {
   source = "../../modules/rabbitmq"
 
   # One vhost per product sharing the broker. The module never names a product itself — these are
-  # the caller's declaration, exactly as modules/acr's repository_patterns are.
+  # the caller's declaration, never the module's.
   vhosts = ["foundry", "reliever"]
 
   admin_password = var.admin_password

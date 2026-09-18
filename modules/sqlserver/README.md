@@ -7,8 +7,8 @@ component: a product gets a database on the shared server, not a server of its o
 
 Nothing here names a product
 ([ADR-PL-0001](../../adr/ADR-PL-0001-papeete-platform-is-a-standalone-terraform-repo.md)). The
-`databases` list is a required input with no default, exactly as [`modules/acr`](../acr/)'s
-`repository_patterns` is: what lives on the server is the caller's declaration.
+`databases` list is a required input with no default: what lives on the server is the caller's
+declaration.
 
 Built from `kubernetes_*` resources rather than a `helm_release` — Microsoft publishes no Helm
 chart, the same "no chart worth installing" case as [`buildkit`](../buildkit/)

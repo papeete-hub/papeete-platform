@@ -46,7 +46,7 @@ variable "configure_upstream_sources" {
 }
 
 variable "publisher_subject_patterns" {
-  description = "Subjects allowed to PUBLISH, as GitHub OIDC sub patterns where * is a wildcard (e.g. [\"repo:papeete-hub/*:environment:release\"]). No default on purpose, following modules/acr's repository_patterns: a feed shared by every repository in an organization should say which of them may write to it. These are whole subjects rather than repository names because that is what the credential matches — a repository and the environment or ref its run carries — and because the expression language has no or operator, so each pattern is its own credential."
+  description = "Subjects allowed to PUBLISH, as GitHub OIDC sub patterns where * is a wildcard (e.g. [\"repo:papeete-hub/*:environment:release\"]). No default on purpose: a feed shared by every repository in an organization should say which of them may write to it. These are whole subjects rather than repository names because that is what the credential matches — a repository and the environment or ref its run carries — and because the expression language has no or operator, so each pattern is its own credential."
   type        = list(string)
 
   validation {

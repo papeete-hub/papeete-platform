@@ -22,13 +22,13 @@ variable "registry_server" {
 }
 
 variable "registry_username" {
-  description = "Push token username (the acr module's push_username)."
+  description = "Registry username (the acr module's username — its admin account)."
   type        = string
   default     = null
 }
 
 variable "registry_password" {
-  description = "Push token password (the acr module's push_password)."
+  description = "Registry password (the acr module's password). Registry-wide: it can overwrite any tag."
   type        = string
   default     = null
   sensitive   = true

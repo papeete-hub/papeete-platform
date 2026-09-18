@@ -1,5 +1,5 @@
 variable "databases" {
-  description = "Databases to create on the shared server, one per product using it. Required with no default, the same way modules/acr's repository_patterns is: the server is shared and product-agnostic, so what lives on it is the caller's declaration. Creation is guarded by IF DB_ID(...) IS NULL, and removing a name here does NOT drop the database — see the README."
+  description = "Databases to create on the shared server, one per product using it. Required with no default: the server is shared and product-agnostic, so what lives on it is the caller's declaration. Creation is guarded by IF DB_ID(...) IS NULL, and removing a name here does NOT drop the database — see the README."
   type        = list(string)
 
   validation {

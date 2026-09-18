@@ -1,11 +1,18 @@
 # `acr`
 
-Creates an [Azure Container Registry](https://learn.microsoft.com/azure/container-registry/) and
-the two scope-mapped tokens an environment needs to use it: one that may **push** to a declared
-set of repository paths, and one that may only **pull** from the same paths. Shared by every actor
-and product deployed into that environment — nothing here names one of them
-([ADR-PL-0001](../../adr/ADR-PL-0001-papeete-platform-is-a-standalone-terraform-repo.md)); the
-paths a token may reach are the caller's input.
+Creates an [Azure Container Registry](https://learn.microsoft.com/azure/container-registry/) on the
+**Basic** SKU and enables its admin account, which is the one credential an environment uses to
+push to it and pull from it. Shared by every actor and product deployed into that environment —
+nothing here names one of them
+([ADR-PL-0001](../../adr/ADR-PL-0001-papeete-platform-is-a-standalone-terraform-repo.md)).
+
+It used to issue two scope-mapped tokens instead, a push and a read-only pull, over caller-declared
+repository paths. That needed the Premium SKU, which is a flat ~€43/month whatever the registry
+holds — measured at €23.49 for the first 17 days of September 2026 against 4.9 GB stored, with no
+other meter on the bill.
+[ADR-PL-0006](../../adr/ADR-PL-0006-the-registry-runs-on-basic-with-its-admin-account.md) records
+the trade that ended: per-repository scoping and a read-only pull credential, for a tenth of the
+price.
 
 This is the first module here to target a **cloud provider rather than a cluster**, and — with
 [`modules/buildkit`](../buildkit/) — the first built from provider resources (`azurerm_*`) rather
@@ -26,12 +33,11 @@ provider "azurerm" {
 }
 
 module "acr" {
-  source = "git::https://github.com/papeete-hub/papeete-platform.git//modules/acr?ref=v0.2.0"
+  source = "git::https://github.com/papeete-hub/papeete-platform.git//modules/acr?ref=v0.3.0"
 
   name                = "papeetefoundry"
   resource_group_name = azurerm_resource_group.this.name
   location            = "westeurope"
-  repository_patterns = ["bnk.rlvr/*", "foundry/*"]
 }
 ```
 
@@ -42,10 +48,8 @@ module "acr" {
 | `name` | Registry name, 5–50 alphanumerics; becomes `<name>.azurecr.io` | *required* |
 | `resource_group_name` | Existing resource group to create it in | *required* |
 | `location` | Azure region | *required* |
-| `repository_patterns` | Repository paths both tokens are scoped to, e.g. `["bnk.rlvr/*"]` | *required* |
-| `sku` | Registry SKU — tokens need `Premium` | `"Premium"` |
-| `admin_enabled` | Enable the registry's single admin account — see below | `false` |
-| `token_password_expiry` | RFC3339 expiry for both token passwords | `null` (never) |
+| `sku` | Registry SKU — the entire cost of this module | `"Basic"` |
+| `admin_enabled` | Enable the registry's single admin account — see below | `true` |
 | `tags` | Azure resource tags | `{}` |
 
 ## Outputs
@@ -55,44 +59,36 @@ module "acr" {
 | `login_server` | `<name>.azurecr.io` — what every image reference is composed from |
 | `name` | Registry name, for `az acr` commands |
 | `id` | Resource id, for role assignments the caller owns |
-| `push_username` / `push_password` | The push token's credentials (password sensitive) |
-| `pull_username` / `pull_password` | The read-only token's credentials (password sensitive) |
-| `admin_username` / `admin_password` | The admin account's credentials, null unless `admin_enabled` |
+| `username` / `password` | The admin account's credentials (password sensitive), null unless `admin_enabled` |
 
-## Scoping
+## What the admin account is, and what it costs you
 
-A scope map is a list of actions over repository paths, and this module derives two from
-`repository_patterns`: `content/read`, `content/write`, `metadata/read` and `metadata/write` for
-push, `content/read` and `metadata/read` for pull. Push includes read deliberately — a push mounts
-layers the registry already holds rather than re-sending them, and fails without it.
+One credential, registry-wide, with no scoping. Everything that touches the registry uses it: the
+builder that pushes, and the `imagePullSecret` a Pod pulls with. Two things follow, and neither is
+hypothetical:
 
-A trailing `/*` matches everything below a path, so `bnk.rlvr/*` covers
-`bnk.rlvr/sup.002.ben/backend` and `bnk.rlvr/sup.002.ben/backend/tests` alike. Neither token can
-reach a repository outside the declared patterns, and neither can delete: retention is an
-`az acr run --cmd "acr purge …"` operation under the caller's own credentials, not something a
-build should be able to do by accident.
+- **A Pod's pull Secret can push.** There is no read-only credential on this tier. Anything that
+  can read that Secret can overwrite any tag in the registry, including one it does not own.
+- **Rotation is registry-wide and instant.** `az acr credential renew --name <registry>
+  --password-name password` invalidates the credential everywhere at once — the pull Secret, the
+  builder's `config.json` and the CI secrets in the actor repos. There is no overlap window unless
+  you use `password2` to stage one.
 
-## The admin account stays off
+`admin_enabled` therefore defaults to `true` because the module has nothing else to offer, not
+because it is a good credential. If an environment needs the push/pull split back, the cheap way is
+not Premium — it is an Entra service principal per role (`AcrPush`, `AcrPull`), which works on
+Basic and which ADR-PL-0006 records as the deliberate follow-up.
 
-`admin_enabled` defaults to `false` and should stay there. It is a single registry-wide credential
-with no scoping and no rotation story, and nothing needs it: a Pod pulls with the pull token, a
-builder pushes with the push token.
+## Storage
 
-It exists as a variable because Docker Desktop's pull-through mirror appears to need it — the
-mirror can only authenticate to a private registry from the host's credential store, and a
-scope-mapped token does not satisfy its resolver. That turns out to be a dead end anyway: the
-mirror also mishandles ACR's blob redirects, so it cannot serve these images regardless. The
-working answer is one `hosts.toml` on the node, which
-[`examples/acr-local`](../../examples/acr-local/) writes and explains.
-
-## Why tokens rather than a service principal
-
-A token is a registry-local credential with no identity in the directory: it can be scoped to a
-path prefix, rotated by replacing one resource, and handed to a cluster as a plain
-`kubernetes.io/dockerconfigjson` Secret. A service principal would carry a directory identity and
-RBAC across the whole registry to do the same job.
+Basic includes **10 GB**; beyond that ACR bills per GB/day. This registry held 4.9 GB when it moved
+tiers, and retention is an `az acr run --cmd "acr purge …"` operation under the caller's own
+credentials — nothing here schedules it, so watch `az acr show-usage -n <registry>` rather than
+assuming the headroom is permanent.
 
 ## Verified against
 
-A single registry in one subscription. Geo-replication, private endpoints and customer-managed
-keys are all deliberately absent — nothing needs them yet (ADR-PL-0001's Consequences).
+A single registry in one subscription. Geo-replication, private endpoints and customer-managed keys
+are all deliberately absent — they are Premium features and nothing needs them (ADR-PL-0001's
+Consequences). The `hosts.toml` node bypass that makes pulls work on Docker Desktop is unaffected
+by the tier and is explained in [`examples/acr-local`](../../examples/acr-local/).

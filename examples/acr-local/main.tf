@@ -44,7 +44,7 @@ variable "kube_context" {
 }
 
 variable "pull_secret_namespaces" {
-  description = "Namespaces to create the read-only pull Secret in. Every namespace that runs an image from this registry needs one — a Secret is namespaced, and there is no cluster-wide form."
+  description = "Namespaces to create the pull Secret in. Every namespace that runs an image from this registry needs one — a Secret is namespaced, and there is no cluster-wide form."
   type        = list(string)
   default     = ["default"]
 }
@@ -84,20 +84,9 @@ module "acr" {
   resource_group_name = azurerm_resource_group.this.name
   location            = azurerm_resource_group.this.location
 
-  # Three paths, because two products share this registry and papeete-deploy looks for an image
-  # under `<product>/<actor>` (ADR-PD-0006) while a CAPABILITY's own images live under
-  # `bnk.rlvr/<type.nnn.code>/`:
-  #   bnk.rlvr/*   capability-scoped components and their test images, published by the
-  #                implementation and testing actors during a round;
-  #   foundry/*    the foundry product's actor images;
-  #   reliever/*   the reliever product's copy of the components it runs, put there by
-  #                reliever-product/PublishComponents.sh.
-  #
-  # `reliever/*` was added to the live scope maps out of band and was missing here, so an apply
-  # would have REVOKED it — on both tokens. That breaks more than publishing: `acr-pull` is what
-  # reliever-local pulls every one of its images with, so the namespace would have stopped being
-  # able to start. Declared now, which is the only place it is true.
-  repository_patterns = ["bnk.rlvr/*", "foundry/*", "reliever/*"]
+  # sku and admin_enabled are left at the module's defaults (Basic, admin on) on purpose: this
+  # example is what ADR-PL-0006 was written against, and a registry that opts out of either one
+  # here would stop being the worked example of it.
 }
 
 resource "azurerm_resource_group" "this" {
@@ -105,8 +94,9 @@ resource "azurerm_resource_group" "this" {
   location = var.location
 }
 
-# What a Pod authenticates with: the read-only token, never the admin account. This is the
-# credential that matters on a real cluster, where the kubelet pulls for itself.
+# What a Pod authenticates with. Since ADR-PL-0006 this is the admin account — the registry has no
+# read-only credential to offer on Basic — so this Secret can push as well as pull. That is the
+# known cost of the tier, not an oversight; `modules/acr`'s README spells out what it means.
 resource "kubernetes_secret" "pull" {
   for_each = toset(var.pull_secret_namespaces)
 
@@ -121,9 +111,9 @@ resource "kubernetes_secret" "pull" {
     ".dockerconfigjson" = jsonencode({
       auths = {
         (module.acr.login_server) = {
-          username = module.acr.pull_username
-          password = module.acr.pull_password
-          auth     = base64encode("${module.acr.pull_username}:${module.acr.pull_password}")
+          username = module.acr.username
+          password = module.acr.password
+          auth     = base64encode("${module.acr.username}:${module.acr.password}")
         }
       }
     })
@@ -160,22 +150,15 @@ output "login_server" {
   value = module.acr.login_server
 }
 
-output "push_username" {
-  value = module.acr.push_username
+output "username" {
+  description = "Admin account username — what a builder logs in with, and what is in the pull Secret."
+  value       = module.acr.username
 }
 
-output "push_password" {
-  value     = module.acr.push_password
-  sensitive = true
-}
-
-output "pull_username" {
-  value = module.acr.pull_username
-}
-
-output "pull_password" {
-  value     = module.acr.pull_password
-  sensitive = true
+output "password" {
+  description = "Admin account password. Registry-wide and able to push."
+  value       = module.acr.password
+  sensitive   = true
 }
 
 output "pull_secret_name" {
