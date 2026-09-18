@@ -29,6 +29,7 @@ modules/
   rabbitmq/          one broker for the cluster, one vhost per product
   sqlserver/         one database server for the cluster, one database per product
   secret-reflector/  mirrors a platform credential into product namespaces, as they appear
+  artifacts-feed/    a private Python index that proxies PyPI, and two federated identities
 examples/
   <name>-local/      the worked example for each, against Docker Desktop's Kubernetes
 environments/
@@ -57,7 +58,7 @@ terraform apply
 
 ## What's here today
 
-Seven modules, each added against a concrete need rather than speculatively (ADR-PL-0001's
+Eight modules, each added against a concrete need rather than speculatively (ADR-PL-0001's
 Consequences):
 
 - [`modules/ingress-nginx`](./modules/ingress-nginx/) — an ingress controller, the one shared piece
@@ -77,9 +78,14 @@ Consequences):
 - [`modules/secret-reflector`](./modules/secret-reflector/) — how a product's pod gets the
   credential for either of those without anyone copying it by hand
   ([ADR-PL-0004](./adr/ADR-PL-0004-platform-credentials-reach-products-by-reflection.md)).
+- [`modules/artifacts-feed`](./modules/artifacts-feed/) — the organization's Python index: an Azure
+  Artifacts feed that proxies PyPI, with a federated identity that may publish to it and one that
+  may only resolve from it
+  ([ADR-PL-0005](./adr/ADR-PL-0005-the-python-index-is-a-private-feed-that-proxies-pypi.md)).
 
-The last four are built from `kubernetes_*` / `azurerm_*` resources rather than a `helm_release` —
-none has a chart worth installing. Each module's README says which it is.
+`acr`, `buildkit`, `rabbitmq`, `sqlserver` and `artifacts-feed` are built from `azurerm_*` /
+`azuread_*` / `kubernetes_*` resources rather than a `helm_release` — none has a chart worth
+installing. Each module's README says which it is.
 
 **A shared component is shared, and a product gets a tenant on it.** One broker with a vhost per
 product, one database server with a database per product — never a broker or a server per product.

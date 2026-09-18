@@ -12,6 +12,7 @@ provisions, and this repo's own boundary against `papeete-deploy` and `papeete-a
 | [ADR-PL-0002](./ADR-PL-0002-image-building-is-shared-platform-infrastructure.md) | Image building is shared platform infrastructure: in-cluster rootless BuildKit pushing to a cloud registry | Accepted |
 | [ADR-PL-0003](./ADR-PL-0003-example-state-is-local-shared-environments-get-a-remote-backend.md) | Example state is local and never shared; a shared environment gets a remote backend when there is one | Accepted |
 | [ADR-PL-0004](./ADR-PL-0004-platform-credentials-reach-products-by-reflection.md) | A shared component publishes a connection Secret, and reflection carries it into product namespaces | Accepted |
+| [ADR-PL-0005](./ADR-PL-0005-the-python-index-is-a-private-feed-that-proxies-pypi.md) | The organization's Python index is a private Azure Artifacts feed that proxies PyPI | Accepted |
 
 ## Authoring
 

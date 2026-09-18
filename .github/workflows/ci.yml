@@ -21,6 +21,8 @@ jobs:
           - examples/sqlserver-local
           - modules/secret-reflector
           - examples/secret-reflector-local
+          - modules/artifacts-feed
+          - examples/artifacts-feed-local
           - environments/local-platform
     steps:
       - uses: actions/checkout@v4
