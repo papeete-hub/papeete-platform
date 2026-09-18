@@ -77,9 +77,25 @@ ever touches this registry, and it is the first thing to reach for instead of re
 - **The move plans as 2 changes and 6 destroys**, verified against the live registry: tokens,
   token passwords and scope maps destroyed, SKU and `admin_enabled` changed in place, the
   `acr-pull` Secret rewritten. Azure documents geo-replications and connected registries as
-  downgrade blockers — this registry has neither — and does not name tokens, so one apply should
-  carry it. [`examples/acr-local`](../examples/acr-local/)'s README has the targeted fallback if
-  it does not.
+  downgrade blockers — this registry has neither — and does not name tokens. **Applied 2026-09-18
+  and it carried in one apply**, no targeted destroy needed: 2 changed, 6 destroyed, registry
+  `Premium -> Basic` with `admin_enabled true`.
+- **But the credential needs a second apply.** Enabling the admin account and reading its username
+  and password in one apply returns empty strings — Azure creates them during the update and the
+  provider answers from before that. The first apply therefore wrote an *empty* credential into the
+  `acr-pull` Secret while reporting success. The second apply fixed it (`username = "" ->
+  "papeetefoundry"`), and the registry then answered `200` on `/v2/_catalog` with 30 repositories
+  visible. `modules/acr`'s README carries the detail and the check.
+- **Known gap: three `acr-pull` Secrets are not managed by anything.** `examples/acr-local`
+  defaults `pull_secret_namespaces` to `["default"]`, but the cluster carries copies in `buildkit`,
+  `foundry-local` and `reliever-local` that no state owns. The token rotation killed all three at
+  once, and they were repaired with `kubectl patch` on 2026-09-18 to get the cluster working again
+  — a deliberate stopgap, not a fix. They will drift on the next credential change exactly as they
+  did on this one. The intended resolution is to pass through every product namespace and have its
+  pull Secret come from a state that owns it; until then, a credential rotation means remembering
+  these three by hand. `modules/buildkit`'s `buildkitd-registry-auth` did *not* need patching — it
+  is owned by `examples/buildkit-local` and was fixed by re-applying that root with the new
+  credential, which is the shape the others should end up in.
 - **Follow-ups outside this repo, which this ADR does not perform.** The actor repos hold the push
   credential as GitHub secrets `ACR_PUSH_USERNAME` / `ACR_PUSH_PASSWORD`
   (`foundry-implementation-actor`, `foundry-testing-actor`, `foundry-task-orchestration-actor`);
