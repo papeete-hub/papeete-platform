@@ -35,8 +35,8 @@ module "artifacts_feed" {
   name                       = "papeete-python"
   github_repository_owner_id = "301756401"
 
-  publisher_subject_patterns = ["repo:papeete-hub/*:environment:azure-artifacts"]
-  consumer_subject_patterns  = ["repo:papeete-hub/*"]
+  publisher_subject_patterns = ["repo:papeete-hub*:environment:azure-artifacts"]
+  consumer_subject_patterns  = ["repo:papeete-hub*"]
 }
 ```
 
@@ -77,6 +77,28 @@ resource and carries no tags.
 credential is a password, so that module has outputs it has to hide. Here the outputs are client ids
 and a tenant id — public identifiers, useless without a token federated from a workflow whose
 subject matches.
+
+## Write the subject pattern against what GitHub actually sends
+
+A subject is not `repo:<org>/<repo>:<context>` any more, or not always. GitHub also issues tokens in
+an **immutable subject format** that inlines numeric ids, and an organization on that format sends:
+
+```
+repo:papeete-hub@301756401/papeete-version@1341540313:environment:azure-artifacts
+```
+
+A pattern written as `repo:papeete-hub/*:environment:azure-artifacts` matches that never, and the
+failure is `AADSTS7002131: No matching federated identity record found` on `azure/login` — which
+reads like a misconfigured credential rather than a mistyped pattern. The fix is a wildcard straight
+after the organization name, `repo:papeete-hub*:…`, which matches both formats and keeps matching if
+GitHub switches between them.
+
+That wildcard gives away nothing. `github_repository_owner_id` is ANDed into every expression, and
+the numeric owner id is what actually confines a credential to one organization — the subject
+pattern's remaining job is to say *which context* within it, an environment or a ref.
+
+The cheapest way to read the format your repositories send is a failed `azure/login` step: it logs
+the subject claim it presented, just above the error.
 
 ## The feed is organization-scoped
 
