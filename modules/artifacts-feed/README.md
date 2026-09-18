@@ -37,6 +37,11 @@ module "artifacts_feed" {
 
   publisher_subject_patterns = ["repo:papeete-hub*:environment:azure-artifacts"]
   consumer_subject_patterns  = ["repo:papeete-hub*"]
+
+  # A second organization that installs from the feed but never publishes to it.
+  additional_consumer_organizations = [
+    { owner_id = "301756381", subject_pattern = "repo:papeete-foundry*" },
+  ]
 }
 ```
 
@@ -48,6 +53,7 @@ module "artifacts_feed" {
 | `publisher_subject_patterns` | GitHub OIDC `sub` patterns allowed to publish | *required* |
 | `consumer_subject_patterns` | `sub` patterns allowed to resolve and cache from upstreams | *required* |
 | `github_repository_owner_id` | Numeric GitHub organization id, the immutable claim Entra demands | *required* |
+| `additional_consumer_organizations` | Other GitHub organizations that may RESOLVE (never publish), as `{ owner_id, subject_pattern }`; each is one more consumer credential pinned to its own owner id | `[]` |
 | `name` | Feed name, and the segment packages are addressed under | `"papeete-python"` |
 | `upstream_sources` | Sources the feed proxies | one `PyPI` public source |
 | `configure_upstream_sources` | Apply the upstream configuration through `az rest` | `true` |
