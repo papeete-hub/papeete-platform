@@ -68,8 +68,16 @@ module "artifacts_feed" {
   # azure-artifacts environment, whose tag protection rule is what confines it to a release; every
   # branch and every pull request in the organization may resolve, because every one of them has to
   # install dependencies before it can do anything at all — and the resolving identity cannot write.
-  publisher_subject_patterns = ["repo:${var.github_organization}/*:environment:${var.github_environment}"]
-  consumer_subject_patterns  = ["repo:${var.github_organization}/*"]
+  #
+  # The `*` after the organization name is not decoration. GitHub issues this organization's tokens
+  # in the immutable subject format, which inlines numeric ids —
+  # `repo:papeete-hub@301756401/papeete-version@1341540313:environment:azure-artifacts`, not
+  # `repo:papeete-hub/papeete-version:environment:azure-artifacts`. The wildcard matches either
+  # form, so the credential survives GitHub switching between them, and it costs nothing: the
+  # expression also pins repository_owner_id, which is what actually confines these to this
+  # organization.
+  publisher_subject_patterns = ["repo:${var.github_organization}*:environment:${var.github_environment}"]
+  consumer_subject_patterns  = ["repo:${var.github_organization}*"]
 }
 
 output "index_url" {

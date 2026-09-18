@@ -142,10 +142,17 @@ that project.
 - **Remains to realize: the feed must be warmed before anything is published to it.** Every version
   the lock files pin has to be pulled through the feed first, which caches it permanently. This
   module opens the feed; it does not warm it, and applying it does not start the clock.
-- **Remains to realize: the two identities have never been assumed.** They can only be reached from
-  a GitHub Actions run, so every check above was made with an operator's own credentials. That
-  `collaborator` is enough to save from an upstream and `contributor` is enough to publish are
-  claims this module makes; the first workflow run is what tests them.
+- **The consuming identity works from a real run.** `papeete-version`'s test lane logs in, mints a
+  token and resolves its whole dependency set through the feed. The first attempt failed on
+  `AADSTS7002131`, which turned out to be the subject format rather than the credential: this
+  organization issues tokens in GitHub's immutable form,
+  `repo:papeete-hub@301756401/papeete-version@1341540313:pull_request`, so a pattern built as
+  `repo:<org>/*` matches nothing. The example's patterns now carry a wildcard straight after the
+  organization name.
+- **Remains to realize: publishing, and a cache miss.** The publishing identity has never been
+  assumed — the first tag tests it. And every package the test lane resolved was already cached by
+  the warming pass, so that `collaborator` is enough to *save* a package from an upstream is still
+  a claim rather than a measurement.
 - **Remains to realize: the seventeen `release.yml` files, and the GitHub environment.** No workflow
   changed here. The `azure-artifacts` environment has to exist in all seventeen repositories, with a
   `v*` tag protection rule, before the publishing credential means anything.
