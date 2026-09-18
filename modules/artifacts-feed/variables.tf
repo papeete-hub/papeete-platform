@@ -75,13 +75,32 @@ variable "consumer_subject_patterns" {
   }
 
   validation {
-    condition     = length(var.consumer_subject_patterns) <= 20
-    error_message = "At most 20 consumer subject patterns are allowed — Entra caps federated identity credentials at 20 per application, and each pattern is one credential."
+    condition     = length(var.consumer_subject_patterns) + length(var.additional_consumer_organizations) <= 20
+    error_message = "At most 20 consumer subject patterns are allowed across consumer_subject_patterns and additional_consumer_organizations — Entra caps federated identity credentials at 20 per application, and each pattern is one credential."
   }
 
   validation {
     condition     = alltrue([for pattern in var.consumer_subject_patterns : startswith(pattern, "repo:")])
     error_message = "Each consumer subject pattern must start with \"repo:\" — that is the shape of every subject GitHub Actions issues."
+  }
+}
+
+variable "additional_consumer_organizations" {
+  description = "Other GitHub organizations whose workflows may RESOLVE from the feed, each as its own numeric owner id and a subject pattern. They are consumers only: nothing here can publish, and publishing stays with github_repository_owner_id's publisher patterns. Each entry is one more federated credential on the consuming identity, pinned to that organization's owner id exactly as the home organization's are to github_repository_owner_id."
+  type = list(object({
+    owner_id        = string
+    subject_pattern = string
+  }))
+  default = []
+
+  validation {
+    condition     = alltrue([for c in var.additional_consumer_organizations : can(regex("^[0-9]+$", c.owner_id))])
+    error_message = "Each additional consumer's owner_id must be digits only — GitHub's numeric id for the organization, from `gh api orgs/<org> --jq .id`."
+  }
+
+  validation {
+    condition     = alltrue([for c in var.additional_consumer_organizations : startswith(c.subject_pattern, "repo:")])
+    error_message = "Each additional consumer's subject_pattern must start with \"repo:\" — that is the shape of every subject GitHub Actions issues."
   }
 }
 

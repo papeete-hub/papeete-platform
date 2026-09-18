@@ -44,6 +44,17 @@ variable "github_repository_owner_id" {
   default     = "301756401"
 }
 
+variable "consumer_organizations" {
+  description = "Other GitHub organizations that RESOLVE from the feed and never publish to it. papeete-foundry holds the capability repositories: their actor images pip-install kpack and kontract, and their CI installs papeete-version and papeete-actor, none of which exists on PyPI any more. Owner ids from `gh api orgs/<org> --jq .id`."
+  type = list(object({
+    owner_id        = string
+    subject_pattern = string
+  }))
+  default = [
+    { owner_id = "301756381", subject_pattern = "repo:papeete-foundry*" },
+  ]
+}
+
 variable "github_environment" {
   description = "GitHub environment a run must pass through before it may publish. It is this environment's tag protection rule — not the federated credential — that restricts publishing to v* tags, because an environment-scoped subject carries no ref."
   type        = string
@@ -78,6 +89,10 @@ module "artifacts_feed" {
   # organization.
   publisher_subject_patterns = ["repo:${var.github_organization}*:environment:${var.github_environment}"]
   consumer_subject_patterns  = ["repo:${var.github_organization}*"]
+
+  # Resolve-only, from other organizations. The same wildcard reasoning applies, and each is pinned
+  # to its own owner id, so `repo:papeete-foundry*` cannot be met by a repository elsewhere.
+  additional_consumer_organizations = var.consumer_organizations
 }
 
 output "index_url" {

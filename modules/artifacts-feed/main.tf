@@ -40,7 +40,16 @@ locals {
   # is derived from the pattern rather than from the pattern's position in the list — reordering the
   # list then moves nothing.
   publisher_credentials = { for pattern in var.publisher_subject_patterns : trim(replace(pattern, "/[^A-Za-z0-9]+/", "-"), "-") => pattern }
-  consumer_credentials  = { for pattern in var.consumer_subject_patterns : trim(replace(pattern, "/[^A-Za-z0-9]+/", "-"), "-") => pattern }
+  #
+  # Consumers can come from more than one GitHub organization, each pinned to ITS OWN owner id. The
+  # home organization's patterns keep the keys they always had, so adding another organization
+  # creates credentials and replaces none.
+  consumer_credentials = merge(
+    { for pattern in var.consumer_subject_patterns :
+    trim(replace(pattern, "/[^A-Za-z0-9]+/", "-"), "-") => { pattern = pattern, owner_id = var.github_repository_owner_id } },
+    { for c in var.additional_consumer_organizations :
+    trim(replace(c.subject_pattern, "/[^A-Za-z0-9]+/", "-"), "-") => { pattern = c.subject_pattern, owner_id = c.owner_id } },
+  )
 }
 
 resource "azuredevops_feed" "this" {
@@ -108,10 +117,10 @@ resource "azuread_application_flexible_federated_identity_credential" "consume" 
 
   application_id             = azuread_application_registration.consume.id
   display_name               = each.key
-  description                = "Resolves from ${azuredevops_feed.this.name} for ${each.value}."
+  description                = "Resolves from ${azuredevops_feed.this.name} for ${each.value.pattern}."
   issuer                     = var.oidc_issuer
   audience                   = var.oidc_audience
-  claims_matching_expression = "claims['sub'] matches '${each.value}' and claims['repository_owner_id'] eq '${var.github_repository_owner_id}'"
+  claims_matching_expression = "claims['sub'] matches '${each.value.pattern}' and claims['repository_owner_id'] eq '${each.value.owner_id}'"
 }
 
 resource "azuredevops_service_principal_entitlement" "publish" {
