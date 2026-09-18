@@ -86,6 +86,16 @@ ever touches this registry, and it is the first thing to reach for instead of re
   `acr-pull` Secret while reporting success. The second apply fixed it (`username = "" ->
   "papeetefoundry"`), and the registry then answered `200` on `/v2/_catalog` with 30 repositories
   visible. `modules/acr`'s README carries the detail and the check.
+- **Known gap: three `acr-pull` Secrets are not managed by anything.** `examples/acr-local`
+  defaults `pull_secret_namespaces` to `["default"]`, but the cluster carries copies in `buildkit`,
+  `foundry-local` and `reliever-local` that no state owns. The token rotation killed all three at
+  once, and they were repaired with `kubectl patch` on 2026-09-18 to get the cluster working again
+  — a deliberate stopgap, not a fix. They will drift on the next credential change exactly as they
+  did on this one. The intended resolution is to pass through every product namespace and have its
+  pull Secret come from a state that owns it; until then, a credential rotation means remembering
+  these three by hand. `modules/buildkit`'s `buildkitd-registry-auth` did *not* need patching — it
+  is owned by `examples/buildkit-local` and was fixed by re-applying that root with the new
+  credential, which is the shape the others should end up in.
 - **Follow-ups outside this repo, which this ADR does not perform.** The actor repos hold the push
   credential as GitHub secrets `ACR_PUSH_USERNAME` / `ACR_PUSH_PASSWORD`
   (`foundry-implementation-actor`, `foundry-testing-actor`, `foundry-task-orchestration-actor`);
