@@ -55,6 +55,13 @@ resources"* — and this is that case arriving.
 input with no default, so the paths a token may reach are the caller's declaration; the examples
 supply them.
 
+> **Updated by [ADR-PL-0006](./ADR-PL-0006-the-registry-runs-on-basic-with-its-admin-account.md)
+> (2026-09-18).** `modules/acr` no longer issues scope-mapped tokens and no longer takes
+> `repository_patterns`: the registry runs on **Basic** with its admin account, because the
+> tokens' Premium SKU was the entire ~€43/month bill. The module still names no actor or product.
+> Everything else in this ADR — in-cluster rootless BuildKit, a cloud registry rather than one in
+> the cluster, the node bypass — stands unchanged.
+
 ## Rationale
 
 **A cloud registry rather than one inside the cluster.** An in-cluster registry was built and
@@ -107,7 +114,9 @@ Removing the need for a bare host process is the fix.
   it is a documented local prerequisite `examples/acr-local` applies — not the node coupling this
   ADR rejected. Clusters without that mirror need nothing.
 - **The registry's admin account stays disabled.** It looked necessary while the mirror was still
-  in the path; with the bypass, a least-privilege pull token is sufficient.
+  in the path; with the bypass, a least-privilege pull token is sufficient. *(Reversed by
+  ADR-PL-0006: on Basic there is no token to be least-privilege with, and the admin account is the
+  only credential. The bypass finding is unaffected — it was never about which credential is used.)*
 - **AppArmor is set by annotation, not by field**, because the `kubernetes` provider still has no
   `app_armor_profile` in `security_context`. The annotation is deprecated in favour of that field
   and remains honoured; swap it when the provider catches up.

@@ -8,8 +8,8 @@ kubectl config use-context docker-desktop   # or pass -var kube_context=<yours>
 terraform init
 terraform apply \
   -var registry_server="$(terraform -chdir=../acr-local output -raw login_server)" \
-  -var registry_username="$(terraform -chdir=../acr-local output -raw push_username)" \
-  -var registry_password="$(terraform -chdir=../acr-local output -raw push_password)"
+  -var registry_username="$(terraform -chdir=../acr-local output -raw username)" \
+  -var registry_password="$(terraform -chdir=../acr-local output -raw password)"
 
 kubectl -n buildkit get pods                # buildkitd Running, and unprivileged
 terraform output buildkit_addr              # what a client sets BUILDKIT_HOST to

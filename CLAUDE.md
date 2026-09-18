@@ -65,11 +65,11 @@ chart worth installing
 variable shape below applies to the Helm modules and does not generalise to them.
 
 **A shared component is shared; a product gets a tenant on it.** `modules/rabbitmq` is one broker
-with a `vhosts` list, `modules/sqlserver` one server with a `databases` list — never one per
-product. Both are required inputs with no default, following `modules/acr`'s `repository_patterns`:
-that is how a module stays product-agnostic while the caller declares what lives on it. Both
-default to namespace `platform`, so the second one installed there needs
-`create_namespace = false`.
+with a `vhosts` list, `modules/sqlserver` one server with a `databases` list,
+`modules/artifacts-feed` one feed with a `publisher_subject_patterns` list — never one per product. All are
+required inputs with no default: that is how a module stays product-agnostic while the caller
+declares what lives on it. `rabbitmq` and `sqlserver` both default to namespace `platform`, so the
+second one installed there needs `create_namespace = false`.
 
 **A product finds a shared component by name, never by being told.** Each publishes a per-tenant
 connection Secret (`platform-<component>-<tenant>`, shaped for `envFrom`), and

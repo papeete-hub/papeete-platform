@@ -31,7 +31,7 @@ module "sqlserver" {
   source = "../../modules/sqlserver"
 
   # One database per product sharing the server. The module never names a product itself — these
-  # are the caller's declaration, exactly as modules/acr's repository_patterns are.
+  # are the caller's declaration, never the module's.
   databases = ["foundry", "reliever"]
 
   sa_password = var.sa_password

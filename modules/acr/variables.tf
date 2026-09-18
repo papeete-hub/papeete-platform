@@ -18,20 +18,10 @@ variable "location" {
   type        = string
 }
 
-variable "repository_patterns" {
-  description = "Repository paths the two tokens are scoped to, as ACR scope-map patterns (e.g. [\"bnk.rlvr/*\", \"foundry/*\"]). A trailing /* matches everything below that path. No default on purpose: a registry shared by several products should say what each token may reach."
-  type        = list(string)
-
-  validation {
-    condition     = length(var.repository_patterns) > 0
-    error_message = "At least one repository pattern is required — an unscoped token defeats the point of scope maps."
-  }
-}
-
 variable "sku" {
-  description = "Registry SKU. Scope maps and tokens are a Premium-only feature, so anything else fails at apply."
+  description = "Registry SKU. Basic by default — it is the whole cost of this module, and the tiers above it buy included storage, geo-replication and repository-scoped tokens that ADR-PL-0006 records this registry does not use. Raise it only for a reason that ADR names."
   type        = string
-  default     = "Premium"
+  default     = "Basic"
 
   validation {
     condition     = contains(["Basic", "Standard", "Premium"], var.sku)
@@ -40,15 +30,9 @@ variable "sku" {
 }
 
 variable "admin_enabled" {
-  description = "Whether the registry's single admin account is enabled. Off by default: scope-mapped tokens are the credential this module exists to issue. Turn it on only where something needs a registry-wide credential — Docker Desktop's pull-through mirror is the known case, and examples/acr-local explains why."
+  description = "Whether the registry's single admin account is enabled. On by default: since ADR-PL-0006 it is the only credential this module issues, so turning it off leaves the registry with no way in short of an Entra role assignment the caller makes itself."
   type        = bool
-  default     = false
-}
-
-variable "token_password_expiry" {
-  description = "RFC3339 expiry for both token passwords (e.g. \"2027-01-01T00:00:00Z\"). Null issues non-expiring passwords."
-  type        = string
-  default     = null
+  default     = true
 }
 
 variable "tags" {

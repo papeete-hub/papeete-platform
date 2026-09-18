@@ -25,10 +25,11 @@ modules/
   ingress-nginx/     installs an ingress controller into an existing k8s cluster
   observability/     OTel Collector, Tempo, Loki, Prometheus, Grafana — one telemetry pipeline
   buildkit/          rootless in-cluster image building, no Docker socket anywhere
-  acr/               an Azure Container Registry with scope-mapped push and pull tokens
+  acr/               an Azure Container Registry on Basic, with its admin account as the credential
   rabbitmq/          one broker for the cluster, one vhost per product
   sqlserver/         one database server for the cluster, one database per product
   secret-reflector/  mirrors a platform credential into product namespaces, as they appear
+  artifacts-feed/    a private Python index that proxies PyPI, and two federated identities
 examples/
   <name>-local/      the worked example for each, against Docker Desktop's Kubernetes
 environments/
@@ -57,7 +58,7 @@ terraform apply
 
 ## What's here today
 
-Seven modules, each added against a concrete need rather than speculatively (ADR-PL-0001's
+Eight modules, each added against a concrete need rather than speculatively (ADR-PL-0001's
 Consequences):
 
 - [`modules/ingress-nginx`](./modules/ingress-nginx/) — an ingress controller, the one shared piece
@@ -68,8 +69,9 @@ Consequences):
 - [`modules/buildkit`](./modules/buildkit/) — rootless BuildKit as an ordinary Deployment, so an
   actor that needs to build an image no longer needs the node's Docker socket
   ([ADR-PL-0002](./adr/ADR-PL-0002-image-building-is-shared-platform-infrastructure.md)).
-- [`modules/acr`](./modules/acr/) — where what it builds goes, with a push token for the builder
-  and a read-only token for everything that runs the result.
+- [`modules/acr`](./modules/acr/) — where what it builds goes: a Basic-tier registry whose admin
+  account is the one credential the builder pushes with and every workload pulls with
+  ([ADR-PL-0006](./adr/ADR-PL-0006-the-registry-runs-on-basic-with-its-admin-account.md)).
 - [`modules/rabbitmq`](./modules/rabbitmq/) — one broker for the cluster, with a vhost per product
   created from a definitions document the broker imports at boot.
 - [`modules/sqlserver`](./modules/sqlserver/) — one SQL Server for the cluster, with a database per
@@ -77,15 +79,19 @@ Consequences):
 - [`modules/secret-reflector`](./modules/secret-reflector/) — how a product's pod gets the
   credential for either of those without anyone copying it by hand
   ([ADR-PL-0004](./adr/ADR-PL-0004-platform-credentials-reach-products-by-reflection.md)).
+- [`modules/artifacts-feed`](./modules/artifacts-feed/) — the organization's Python index: an Azure
+  Artifacts feed that proxies PyPI, with a federated identity that may publish to it and one that
+  may only resolve from it
+  ([ADR-PL-0005](./adr/ADR-PL-0005-the-python-index-is-a-private-feed-that-proxies-pypi.md)).
 
-The last four are built from `kubernetes_*` / `azurerm_*` resources rather than a `helm_release` —
-none has a chart worth installing. Each module's README says which it is.
+`acr`, `buildkit`, `rabbitmq`, `sqlserver` and `artifacts-feed` are built from `azurerm_*` /
+`azuread_*` / `kubernetes_*` resources rather than a `helm_release` — none has a chart worth
+installing. Each module's README says which it is.
 
 **A shared component is shared, and a product gets a tenant on it.** One broker with a vhost per
 product, one database server with a database per product — never a broker or a server per product.
-Both modules take that list of names as a required input with no default, the way `acr` takes
-`repository_patterns`: the component is product-agnostic, and what lives on it is the caller's
-declaration. Both default to the same `platform` namespace, so one namespace holds the shared
+Both modules take that list of names as a required input with no default: the component is
+product-agnostic, and what lives on it is the caller's declaration. Both default to the same `platform` namespace, so one namespace holds the shared
 services.
 
 **And a product finds them without being told.** Each publishes a per-tenant connection Secret at a

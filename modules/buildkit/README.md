@@ -26,8 +26,8 @@ module "buildkit" {
 
   registry_auth = {
     server   = module.acr.login_server
-    username = module.acr.push_username
-    password = module.acr.push_password
+    username = module.acr.username
+    password = module.acr.password
   }
 }
 ```
@@ -106,8 +106,9 @@ client and daemon happen to be the same container.
 `registry_auth` remains available for what the daemon does on its own account, and defaults to
 null. When set it becomes a `kubernetes.io/dockerconfigjson` Secret mounted read-only with its
 `.dockerconfigjson` key **projected to `config.json`**, since that is the name `buildctl` reads.
-Scope the token to the repositories it needs ([`modules/acr`](../acr/) issues exactly such a
-token) rather than relying on a registry-wide one.
+[`modules/acr`](../acr/) has only a registry-wide credential to give since ADR-PL-0006, so treat
+this Secret accordingly: it can overwrite any tag in the registry, not just the ones this builder
+produces.
 
 ## Verified against
 

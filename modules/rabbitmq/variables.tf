@@ -1,5 +1,5 @@
 variable "vhosts" {
-  description = "Virtual hosts to create, one per product sharing this broker. Required with no default, the same way modules/acr's repository_patterns is: the broker is shared and product-agnostic, so what lives on it is the caller's declaration, not this module's. Note that removing a name here does NOT delete the vhost from a broker that already has it — see the README."
+  description = "Virtual hosts to create, one per product sharing this broker. Required with no default: the broker is shared and product-agnostic, so what lives on it is the caller's declaration, not this module's. Note that removing a name here does NOT delete the vhost from a broker that already has it — see the README."
   type        = list(string)
 
   validation {

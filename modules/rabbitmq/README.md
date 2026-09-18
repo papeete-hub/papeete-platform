@@ -6,8 +6,7 @@ a broker of its own — the same rule [`sqlserver`](../sqlserver/) applies to da
 
 Nothing here names a product
 ([ADR-PL-0001](../../adr/ADR-PL-0001-papeete-platform-is-a-standalone-terraform-repo.md)). The
-`vhosts` list is a required input with no default, exactly as
-[`modules/acr`](../acr/)'s `repository_patterns` is: what lives on the broker is the caller's
+`vhosts` list is a required input with no default: what lives on the broker is the caller's
 declaration.
 
 Built from `kubernetes_*` resources rather than a `helm_release` — see
