@@ -27,8 +27,7 @@ locals {
   # sends the name alone on create and an empty object on update, so a later apply never clobbers
   # these fields — which is what makes the hybrid stable rather than a fight.
   feed_update = jsonencode({
-    upstreamEnabled           = length(var.upstream_sources) > 0
-    allowUpstreamNameConflict = var.allow_upstream_name_conflict
+    upstreamEnabled = length(var.upstream_sources) > 0
     upstreamSources = [for source in var.upstream_sources : {
       name               = source.name
       protocol           = source.protocol

@@ -39,12 +39,6 @@ variable "upstream_sources" {
   }
 }
 
-variable "allow_upstream_name_conflict" {
-  description = "Whether the feed accepts a package whose name also exists in an upstream. Azure Artifacts refuses that by default, so leaving this off means the first publish of any package that is already on pypi.org fails outright — which is every package this feed exists for. The same mechanism runs the other way too, and that side is not optional: once an internal version of a package exists, versions of it that live only upstream stop being reachable through the feed, so every pinned version has to be cached before the first internal publish."
-  type        = bool
-  default     = true
-}
-
 variable "configure_upstream_sources" {
   description = "Whether to apply the upstream configuration through az rest. The azuredevops provider's feed schema is name, project and two delete flags — it cannot express an upstream at all — so this one setting is a local-exec against the REST API. Set it to false where az is unavailable or unauthenticated, and configure the upstreams by hand; the feed and both identities are provisioned either way."
   type        = bool

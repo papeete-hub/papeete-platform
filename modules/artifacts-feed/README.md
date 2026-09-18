@@ -50,7 +50,6 @@ module "artifacts_feed" {
 | `github_repository_owner_id` | Numeric GitHub organization id, the immutable claim Entra demands | *required* |
 | `name` | Feed name, and the segment packages are addressed under | `"papeete-python"` |
 | `upstream_sources` | Sources the feed proxies | one `PyPI` public source |
-| `allow_upstream_name_conflict` | Accept a package whose name also exists upstream — see below | `true` |
 | `configure_upstream_sources` | Apply the upstream configuration through `az rest` | `true` |
 | `oidc_issuer` | Issuer the credentials trust | GitHub Actions |
 | `oidc_audience` | Audience the incoming token must carry | `"api://AzureADTokenExchange"` |
@@ -106,21 +105,23 @@ stable, and `terraform plan` right after an apply proves it by reporting no drif
 The REST host is `feeds.dev.azure.com`, not `dev.azure.com`. The packaging endpoints do not exist
 under the organization's own host, and a `PATCH` there returns 404.
 
-## `allow_upstream_name_conflict`, which cuts both ways
+## Publishing is a one-way door, per package
 
-Azure Artifacts refuses, by default, to accept a package whose name already exists in an upstream.
-Every package this feed exists to serve is also on pypi.org, so without this flag the first publish
-of any of them fails outright. It defaults to `true` because the alternative is a feed that cannot
-be published to.
+Once an internal version of a package exists in the feed, versions of that package that live only
+upstream stop being reachable through it. Unblocking one afterwards is a
+`PATCH .../pypi/packages/<name>/upstreaming` per package, and up to three hours of propagation. A
+version already **cached** in the feed, by contrast, stays reachable forever.
 
-The same mechanism runs the other way, and that direction is **not** configurable: once an internal
-version of a package exists in the feed, versions of that package that live only upstream stop being
-reachable through it. Unblocking one afterwards is a `PATCH .../pypi/packages/<name>/upstreaming`
-per package and up to three hours of propagation.
+So every version anything pins has to be pulled through the feed **before** the first internal
+publish of that package. This module opens the feed; it does not warm it, and applying it does not
+start the clock.
 
-A version already **cached** in the feed stays reachable forever. So every version anything pins has
-to be pulled through the feed **before** the first internal publish. That is a one-way door, and it
-is the caller's to walk through — this module opens the feed, it does not warm it.
+Azure Artifacts has a feed-level `allowUpstreamNameConflict` that sounds like it belongs here. It
+does not: it is gated behind the `Packaging.Feed.Npm.AllowUpstreamNameConflict` feature, a `PATCH`
+carrying it fails with `FeatureDisabledException` on a feed like this one, and the name says which
+protocol it was built for. Whether a PyPI feed refuses an internal package whose name also exists
+upstream is therefore **not settled here** — the first publish of the pilot package is what settles
+it, and it must happen after the feed is warm either way.
 
 ## The consumer is a collaborator, not a reader
 
@@ -135,9 +136,16 @@ every third-party dependency. The publishing identity is a `contributor`, which 
 - **The organization, and the member user that owns it.** Neither is an ARM resource; no provider
   creates them. The same boundary as `modules/acr`'s `resource_group_name`.
 - **A PAT for the `azuredevops` provider.** It cannot authenticate from an `az login`, so an apply
-  needs a personal access token scoped to Packaging and Identity. It is the one long-lived secret
-  this design does not remove, it belongs on the operator's machine, and it never belongs in CI —
-  CI authenticates through the identities this module creates.
+  needs a personal access token. Four scopes, measured rather than guessed — **Packaging**
+  (read/write/manage), **Identity** (read), **Member Entitlement Management** (read & write) and
+  **Graph** (read). The first two alone create the feed and then fail on the entitlements, which is
+  the trap: the failure lands halfway through an apply. It is the one long-lived secret this design
+  does not remove, it belongs on the operator's machine, and it never belongs in CI — CI
+  authenticates through the identities this module creates.
+- **A directory role for whoever applies this.** Creating an application and a service principal
+  needs no role; **deleting a service principal does**, and owning the application is not enough.
+  Without **Application Administrator** (or Cloud Application Administrator) the apply succeeds and
+  the destroy fails with `Authorization_RequestDenied`, so the gap shows up at the worst moment.
 - **The GitHub side.** The environment named in `publisher_subject_patterns` has to exist in every
   publishing repository, with whatever protection rule restricts it to a release — an
   environment-scoped subject carries no ref, so the environment is where that restriction lives. The
@@ -145,8 +153,13 @@ every third-party dependency. The publishing identity is a `contributor`, which 
 
 ## Verified against
 
-One organization, one organization-scoped feed, one public PyPI upstream, two identities. Feed
-views, project-scoped feeds, internal upstreams pointing at another feed, and per-package upstream
-policies are all absent because nothing needs them yet. The flexible federated identity credentials
-were exercised against a live tenant before the module was written — see ADR-PL-0005 for what that
-proved and what it left in preview.
+Applied once, against the `papeete-consulting` organization: the feed came up organization-scoped
+with PyPI attached and `status: ok`, `terraform plan` immediately afterwards reported no drift — the
+out-of-band `PATCH` is not reclaimed — and `uv` resolved a third-party package through the feed,
+which then held it as a cached version. Feed views, project-scoped feeds, internal upstreams and
+per-package upstream policies are all absent because nothing needs them yet.
+
+**Not yet exercised: the two identities themselves.** They can only be assumed from a GitHub Actions
+run, so the checks above were made with an operator's own credentials. That the `collaborator` role
+is enough to save from an upstream, and that the `contributor` role is enough to publish, are
+claims this module makes and the first workflow run tests.

@@ -11,7 +11,7 @@ applied from a workstation with local state ([ADR-PL-0003](../../adr/ADR-PL-0003
 
 ```bash
 az login
-export AZDO_PERSONAL_ACCESS_TOKEN=<Packaging read/write/manage + Identity read>
+export AZDO_PERSONAL_ACCESS_TOKEN=<see the four scopes below>
 terraform init
 terraform apply
 ```
@@ -58,6 +58,22 @@ organization's *name* would still match if that name were ever given up and re-r
 The `azuredevops` provider cannot authenticate from an `az login`; the request has been open since
 2021. So an apply needs a personal access token, scoped to **Packaging** (read/write/manage) and
 **Identity** (read), read from `AZDO_PERSONAL_ACCESS_TOKEN`.
+
+Four scopes, and all four are load-bearing:
+
+| Scope | What needs it |
+|---|---|
+| **Packaging** (read/write/manage) | the feed itself |
+| **Identity** (read) | resolving the descriptors permissions are granted to |
+| **Member Entitlement Management** (read & write) | `azuredevops_service_principal_entitlement` |
+| **Graph** (read) | reading back the service principals it creates |
+
+The first two are the obvious ones and are not enough: an apply with only those creates the feed and
+then fails on the first entitlement, halfway through.
+
+The operator also needs the **Application Administrator** directory role in Entra. Creating the
+applications and their service principals needs no role at all, but *deleting* a service principal
+does — so without it the apply works and `terraform destroy` fails.
 
 It stays on the operator's machine and never becomes a GitHub secret. CI does not use it and has no
 way to: a workflow logs in with `azure/login`, exchanges its OIDC token for an Entra token against

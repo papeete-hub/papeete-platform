@@ -100,22 +100,29 @@ that project.
 
 ## Consequences
 
-- **Verified against a live tenant, not merely designed.** An `azuread_application_registration` plus
-  an `azuread_application_flexible_federated_identity_credential` were applied, re-planned and
-  destroyed in the `Default Directory` tenant. The apply succeeded, the re-plan reported *No
-  changes*, and Graph returned the expression stored with `subject: null` and `languageVersion: 1`.
-  The provider reads the expression back faithfully, so the credentials do not drift.
+- **Applied, not merely designed.** The whole module was applied against the `papeete-consulting`
+  organization. The feed came up organization-scoped with PyPI attached and `status: ok`, both
+  service principals hold Basic licenses, the feed carries one `contributor` and one `collaborator`,
+  and `uv` resolved a third-party package through the feed, which then held it as a cached version.
+  Graph stores the credential expressions with `subject: null` and `languageVersion: 1`, and the
+  provider reads them back faithfully, so they do not drift.
+- **The out-of-band `PATCH` is not reclaimed.** `terraform plan` immediately after the apply
+  reported no changes, which is the property the whole hybrid rests on. It is a property of the
+  current provider rather than a guarantee, so that same plan is the check that it still holds.
 - **The flexible credential is a preview feature on a beta endpoint.** The provider writes it
   through `graph.microsoft.com/beta`. A breaking change there breaks this module, and the fallback is
   known and costed: seventeen classic credentials in a `for_each`, seventeen of twenty slots used.
-- **The upstream configuration lives outside the provider's model.** It survives because
-  `azuredevops_feed` transmits the name alone on create and an empty object on update, so an apply
-  never clears what the `PATCH` set. That is a property of the current provider, not a guarantee —
-  `terraform plan` immediately after an apply is the check that it still holds.
 - **One long-lived secret remains: the bootstrap PAT.** The `azuredevops` provider cannot
-  authenticate from an `az login`. Applying this module therefore needs a personal access token
-  scoped to Packaging and Identity, on the operator's machine. It is never a GitHub secret, and CI
-  has no use for it.
+  authenticate from an `az login`. Applying this module therefore needs a personal access token on
+  the operator's machine. It is never a GitHub secret, and CI has no use for it. It needs four
+  scopes, not the two that are obvious: Packaging and Identity create the feed and then fail on the
+  first entitlement, so Member Entitlement Management and Graph are required too — a failure that
+  lands halfway through an apply rather than at its start.
+- **Applying this module needs a directory role; using it does not.** Creating an application and a
+  service principal is open to any member the tenant lets register applications. *Deleting* a
+  service principal is not, and owning its application does not help. Without Application
+  Administrator the apply succeeds and the destroy fails with `Authorization_RequestDenied`, which
+  is the worst possible moment to discover it.
 - **Storage is now a shared, finite resource.** An organization gets 2 GiB free, every third-party
   wheel pulled through the upstream is stored against it, and a deleted package still counts for 30
   days. The module sets a retention policy by default; billing has to be attached to the
@@ -125,11 +132,20 @@ that project.
 - **Publishing is a one-way door, per package.** The first internal version of a package makes every
   version of it that lives only on pypi.org unreachable through the feed — including the versions the
   fifteen committed lock files pin. Reversing it is a `PATCH .../upstreaming` per package and up to
-  three hours of propagation. Conversely, `allow_upstream_name_conflict` has to be on or the first
-  publish fails, because all seventeen names already exist upstream.
+  three hours of propagation.
+- **`allowUpstreamNameConflict` turned out not to apply.** The feed update API carries it, and it
+  was written into this module on the assumption that publishing a package whose name exists
+  upstream would otherwise be refused. The first apply rejected it:
+  `FeatureDisabledException: Packaging.Feed.Npm.AllowUpstreamNameConflict` — it is an npm feature,
+  gated off for this organization. It has been removed. Whether a PyPI feed enforces the same
+  conflict is now an open question that the pilot's first publish answers.
 - **Remains to realize: the feed must be warmed before anything is published to it.** Every version
   the lock files pin has to be pulled through the feed first, which caches it permanently. This
   module opens the feed; it does not warm it, and applying it does not start the clock.
+- **Remains to realize: the two identities have never been assumed.** They can only be reached from
+  a GitHub Actions run, so every check above was made with an operator's own credentials. That
+  `collaborator` is enough to save from an upstream and `contributor` is enough to publish are
+  claims this module makes; the first workflow run is what tests them.
 - **Remains to realize: the seventeen `release.yml` files, and the GitHub environment.** No workflow
   changed here. The `azure-artifacts` environment has to exist in all seventeen repositories, with a
   `v*` tag protection rule, before the publishing credential means anything.
