@@ -84,9 +84,9 @@ exchanges its OIDC token for an Entra token, and hands that to the feed as a pas
 hour.
 
 **Client ids as outputs, where `modules/acr` emits passwords.** This is the one place this module is
-plainly better than its own precedent, and it is worth naming: `modules/acr` has to mark four
-outputs `sensitive` because a registry token *is* its password. Here every output is a public
-identifier.
+plainly better than its own precedent, and it is worth naming: a registry credential *is* a
+password, whichever kind that module issues, so it has outputs it must mark `sensitive`. Here every
+output is a public identifier.
 
 **Flexible federated identity credentials over seventeen classic ones.** Classic credentials match a
 subject exactly and cap at twenty per application, which would have left three spare — no room for a

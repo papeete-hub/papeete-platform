@@ -73,10 +73,10 @@ resource and carries no tags.
 | `tenant_id` | Entra tenant both identities live in |
 | `azure_devops_resource_id` | The `--resource` that turns an Entra login into a feed password |
 
-**Not one of them is `sensitive`,** and that is the whole difference from `modules/acr`. There, the
-two tokens' passwords are the outputs that matter and both are marked sensitive. Here the outputs
-are client ids and a tenant id — public identifiers, useless without a token federated from a
-workflow whose subject matches.
+**Not one of them is `sensitive`,** and that is the whole difference from `modules/acr`. A registry
+credential is a password, so that module has outputs it has to hide. Here the outputs are client ids
+and a tenant id — public identifiers, useless without a token federated from a workflow whose
+subject matches.
 
 ## The feed is organization-scoped
 
